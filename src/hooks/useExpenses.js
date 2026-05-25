@@ -1,0 +1,65 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '../services/supabaseClient';
+
+async function fetchExpenses() {
+  const { data, error } = await supabase
+    .from('expenses')
+    .select('*, item:items(id, title, brand)')
+    .order('expense_date', { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return data ?? [];
+}
+
+async function createExpense(payload) {
+  const normalizedType = payload.type?.trim();
+  const normalizedAmount = Number(payload.amount);
+
+  if (!normalizedType) {
+    throw new Error('Укажите тип расхода.');
+  }
+
+  if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+    throw new Error('Сумма расхода должна быть больше нуля.');
+  }
+
+  const { data, error } = await supabase
+    .from('expenses')
+    .insert({
+      type: normalizedType,
+      amount: normalizedAmount,
+      expense_date: payload.expense_date,
+      note: payload.note?.trim() || '',
+      item_id: payload.item_id === null ? null : payload.item_id,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+export function useExpenses() {
+  return useQuery({
+    queryKey: ['expenses'],
+    queryFn: fetchExpenses,
+  });
+}
+
+export function useCreateExpense() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: createExpense,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+    },
+  });
+}

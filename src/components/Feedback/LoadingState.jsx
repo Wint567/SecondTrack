@@ -1,0 +1,12 @@
+import { LoaderCircle } from 'lucide-react';
+
+export function LoadingState({ label = 'Загрузка...' }) {
+  return (
+    <div className="flex min-h-[240px] items-center justify-center rounded-2xl border border-slate-800 bg-slate-900/70">
+      <div className="flex items-center gap-3 text-slate-300">
+        <LoaderCircle className="h-5 w-5 animate-spin text-sky-400" />
+        <span>{label}</span>
+      </div>
+    </div>
+  );
+}
