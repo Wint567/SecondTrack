@@ -11,7 +11,3 @@ export const STORAGE_BUCKET =
   import.meta.env.VITE_SUPABASE_STORAGE_BUCKET || 'item-photos';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-console.log('URL:', supabaseUrl);
-console.log('KEY EXISTS:', !!supabaseAnonKey);
-console.log('BUCKET:', import.meta.env.VITE_SUPABASE_STORAGE_BUCKET);

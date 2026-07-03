@@ -1,68 +1,160 @@
+import { Pencil, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { formatCurrency, formatStatusLabel } from '../../utils/formatters';
+import { StatusBadge } from '../UI/StatusBadge';
+import { formatCurrency } from '../../utils/formatters';
+
+function ItemPreview({ item, size = 'table' }) {
+  const imageClassName = size === 'card' ? 'h-20 w-20' : 'h-14 w-14';
+
+  if (item.primary_photo) {
+    return (
+      <img
+        src={item.primary_photo}
+        alt={item.title}
+        className={`${imageClassName} flex-none rounded-2xl object-cover`}
+      />
+    );
+  }
+
+  return (
+    <div className={`flex ${imageClassName} flex-none items-center justify-center rounded-2xl border border-dashed border-slate-700 text-xs text-slate-500`}>
+      Нет фото
+    </div>
+  );
+}
+
+function ItemMobileCard({ item, deletingItemId, onDelete }) {
+  return (
+    <article className="rounded-2xl border border-slate-800/90 bg-slate-900/60 p-4 shadow-panel backdrop-blur-xl transition hover:border-slate-700/90">
+      <div className="flex gap-3">
+        <ItemPreview item={item} size="card" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-medium text-white">{item.title}</p>
+          <p className="mt-1 text-xs text-slate-500">
+            {[item.brand, item.category, item.size].filter(Boolean).join(' • ') || 'Без категории'}
+          </p>
+          <div className="mt-3">
+            <StatusBadge status={item.status} />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+        <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
+          <p className="text-xs text-slate-500">Закупка</p>
+          <p className="mt-1 font-medium tabular-nums text-slate-100">{formatCurrency(item.purchase_price)}</p>
+        </div>
+        <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
+          <p className="text-xs text-slate-500">Продажа</p>
+          <p className="mt-1 font-medium tabular-nums text-slate-100">{formatCurrency(item.actual_sale_price || item.planned_sale_price)}</p>
+        </div>
+        <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
+          <p className="text-xs text-slate-500">Расходы</p>
+          <p className="mt-1 font-medium tabular-nums text-slate-100">{formatCurrency(item.total_expenses)}</p>
+        </div>
+        <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
+          <p className="text-xs text-slate-500">Прибыль</p>
+          <p className={`mt-1 font-semibold tabular-nums ${item.profit >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+            {formatCurrency(item.profit)}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <Link to={`/items/${item.id}/edit`} className="button-secondary px-3 py-2 text-xs">
+          Редактировать
+        </Link>
+        <button
+          type="button"
+          className="button-secondary border-rose-500/30 px-3 py-2 text-xs text-rose-300 hover:border-rose-400/40 hover:bg-rose-500/10"
+          onClick={() => onDelete(item)}
+          disabled={deletingItemId === item.id}
+        >
+          {deletingItemId === item.id ? 'Удаление...' : 'Удалить'}
+        </button>
+      </div>
+    </article>
+  );
+}
 
 export function ItemTable({ items, deletingItemId = null, onDelete }) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-slate-800">
-          <thead className="bg-slate-950/60 text-left text-xs uppercase tracking-[0.2em] text-slate-500">
+    <>
+      <div className="grid gap-3 md:grid-cols-2 xl:hidden">
+        {items.map((item) => (
+          <ItemMobileCard
+            key={item.id}
+            item={item}
+            deletingItemId={deletingItemId}
+            onDelete={onDelete}
+          />
+        ))}
+      </div>
+
+      <div className="hidden w-full max-w-full overflow-x-auto overscroll-x-contain rounded-2xl border border-slate-800/90 bg-slate-900/60 shadow-panel backdrop-blur-xl xl:block">
+        <table className="w-full min-w-[940px] table-fixed divide-y divide-slate-800">
+          <colgroup>
+            <col className="w-[76px]" />
+            <col className="w-[240px]" />
+            <col className="w-[106px]" />
+            <col className="w-[106px]" />
+            <col className="w-[100px]" />
+            <col className="w-[106px]" />
+            <col className="w-[114px]" />
+            <col className="w-[92px]" />
+          </colgroup>
+          <thead className="bg-slate-950/60 text-left text-[11px] uppercase tracking-[0.12em] text-slate-500">
             <tr>
-              <th className="px-5 py-4">Фото</th>
-              <th className="px-5 py-4">Название</th>
-              <th className="px-5 py-4">Цена покупки</th>
-              <th className="px-5 py-4">Цена продажи</th>
-              <th className="px-5 py-4">Расходы</th>
-              <th className="px-5 py-4">Прибыль</th>
-              <th className="px-5 py-4">Статус</th>
-              <th className="px-5 py-4">Действия</th>
+              <th className="whitespace-nowrap px-3 py-3">Фото</th>
+              <th className="px-3 py-3">Название</th>
+              <th className="whitespace-nowrap px-3 py-3">Покупка</th>
+              <th className="whitespace-nowrap px-3 py-3">Продажа</th>
+              <th className="whitespace-nowrap px-3 py-3">Расходы</th>
+              <th className="whitespace-nowrap px-3 py-3">Прибыль</th>
+              <th className="whitespace-nowrap px-3 py-3">Статус</th>
+              <th className="whitespace-nowrap px-3 py-3 text-center">Действия</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800 text-sm">
             {items.map((item) => (
               <tr key={item.id} className="hover:bg-slate-800/40">
-                <td className="px-5 py-4">
-                  {item.primary_photo ? (
-                    <img
-                      src={item.primary_photo}
-                      alt={item.title}
-                      className="h-14 w-14 rounded-2xl object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-dashed border-slate-700 text-xs text-slate-500">
-                      Нет фото
-                    </div>
-                  )}
+                <td className="px-3 py-3">
+                  <ItemPreview item={item} />
                 </td>
-                <td className="px-5 py-4">
-                  <p className="font-medium text-white">{item.title}</p>
-                  <p className="text-xs text-slate-500">
+                <td className="min-w-0 px-3 py-3">
+                  <p className="truncate font-medium text-white">{item.title}</p>
+                  <p className="truncate text-xs text-slate-500">
                     {[item.brand, item.category, item.size].filter(Boolean).join(' • ') || 'Без категории'}
                   </p>
                 </td>
-                <td className="px-5 py-4 text-slate-200">{formatCurrency(item.purchase_price)}</td>
-                <td className="px-5 py-4 text-slate-200">{formatCurrency(item.actual_sale_price || item.planned_sale_price)}</td>
-                <td className="px-5 py-4 text-slate-200">{formatCurrency(item.total_expenses)}</td>
-                <td className={`px-5 py-4 font-medium ${item.profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                <td className="whitespace-nowrap px-3 py-3 tabular-nums text-slate-200">{formatCurrency(item.purchase_price)}</td>
+                <td className="whitespace-nowrap px-3 py-3 tabular-nums text-slate-200">{formatCurrency(item.actual_sale_price || item.planned_sale_price)}</td>
+                <td className="whitespace-nowrap px-3 py-3 tabular-nums text-slate-200">{formatCurrency(item.total_expenses)}</td>
+                <td className={`whitespace-nowrap px-3 py-3 font-semibold tabular-nums ${item.profit >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
                   {formatCurrency(item.profit)}
                 </td>
-                <td className="px-5 py-4">
-                  <span className="rounded-full border border-slate-700 bg-slate-950 px-3 py-1 text-xs text-slate-300">
-                    {formatStatusLabel(item.status)}
-                  </span>
+                <td className="whitespace-nowrap px-3 py-3">
+                  <StatusBadge status={item.status} />
                 </td>
-                <td className="px-5 py-4">
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <Link to={`/items/${item.id}/edit`} className="button-secondary">
-                      Редактировать
+                <td className="px-3 py-3">
+                  <div className="flex justify-center gap-2">
+                    <Link
+                      to={`/items/${item.id}/edit`}
+                      className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-xl border border-slate-700 bg-slate-900 text-sky-300 transition hover:border-sky-400 hover:bg-slate-800"
+                      title="Редактировать"
+                      aria-label={`Редактировать ${item.title}`}
+                    >
+                      <Pencil className="h-5 w-5" strokeWidth={2.25} />
                     </Link>
                     <button
                       type="button"
-                      className="button-secondary border-rose-500/30 text-rose-300 hover:border-rose-400/40 hover:bg-rose-500/10"
+                      className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-xl border border-rose-500/30 bg-slate-900 text-rose-300 transition hover:border-rose-400/40 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-60"
                       onClick={() => onDelete(item)}
                       disabled={deletingItemId === item.id}
+                      title="Удалить"
+                      aria-label={`Удалить ${item.title}`}
                     >
-                      {deletingItemId === item.id ? 'Удаление...' : 'Удалить'}
+                      <Trash2 className="h-5 w-5" strokeWidth={2.25} />
                     </button>
                   </div>
                 </td>
@@ -71,6 +163,6 @@ export function ItemTable({ items, deletingItemId = null, onDelete }) {
           </tbody>
         </table>
       </div>
-    </div>
+    </>
   );
 }

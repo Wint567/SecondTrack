@@ -1,7 +1,7 @@
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { formatStatusLabel } from '../../utils/formatters';
 
-const COLORS = ['#38bdf8', '#34d399', '#f59e0b', '#8b5cf6', '#fb7185', '#94a3b8'];
+const COLORS = ['#34d97a', '#3b82f6', '#8b5cf6', '#c9a94f', '#b87469', '#64748b'];
 
 export function StatusPieChart({ data }) {
   return (
@@ -14,7 +14,7 @@ export function StatusPieChart({ data }) {
         </Pie>
         <Tooltip
           formatter={(value, name) => [value, formatStatusLabel(name)]}
-          contentStyle={{ backgroundColor: '#020617', border: '1px solid #1e293b', borderRadius: 16, color: '#ffffff' }}
+          contentStyle={{ backgroundColor: '#0b1118', border: '1px solid #1f2937', borderRadius: 16, color: '#ffffff' }}
           labelStyle={{ color: '#ffffff' }}
           itemStyle={{ color: '#ffffff' }}
         />

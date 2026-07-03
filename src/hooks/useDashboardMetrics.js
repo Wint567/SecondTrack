@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useItems } from './useItems';
 import { useExpenses } from './useExpenses';
-import { buildProfitTrend, buildPurchaseTrend, buildSalesTrend, buildStatusChart } from '../utils/chartData';
+import { buildMonthlyStats, buildStatusChart } from '../utils/chartData';
 import { calculateItemProfit, calculateRoi } from '../utils/itemMetrics';
 import { SOLD_STATUS } from '../utils/constants';
 
@@ -17,29 +17,25 @@ export function useDashboardMetrics() {
     const totalPurchaseAmount = items.reduce((sum, item) => sum + Number(item.purchase_price || 0), 0);
     const totalSales = soldItems.reduce((sum, item) => sum + Number(item.actual_sale_price || 0), 0);
     const totalExpenses = expenses.reduce((sum, expense) => sum + Number(expense.amount || 0), 0);
-    const totalProfit = soldItems.reduce((sum, item) => {
-      const profit = calculateItemProfit(item);
-      return profit > 0 ? sum + profit : sum;
-    }, 0);
+    const soldNetProfit = soldItems.reduce((sum, item) => sum + calculateItemProfit(item), 0);
     const totalLoss = soldItems.reduce((sum, item) => {
       const profit = calculateItemProfit(item);
       return profit < 0 ? sum + Math.abs(profit) : sum;
     }, 0);
-    const netProfit = totalSales - totalPurchaseAmount - totalExpenses;
-    const roi = calculateRoi(netProfit, totalPurchaseAmount + totalExpenses);
+    const cashflow = totalSales - totalPurchaseAmount - totalExpenses;
+    const roi = calculateRoi(cashflow, totalPurchaseAmount + totalExpenses);
+    const monthlyStats = buildMonthlyStats(items, expenses);
 
     return {
       totalPurchaseAmount,
       totalSales,
       totalExpenses,
-      totalProfit,
+      soldNetProfit,
       totalLoss,
-      netProfit,
+      cashflow,
       roi,
       itemsCount: items.length,
-      purchaseTrend: buildPurchaseTrend(items),
-      salesTrend: buildSalesTrend(items),
-      profitTrend: buildProfitTrend(items),
+      monthlyStats,
       statusChart: buildStatusChart(items),
       soldItems,
     };

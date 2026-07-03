@@ -1,4 +1,4 @@
-import { BarChart3, DollarSign, Package2, PlusSquare, Wallet } from 'lucide-react';
+import { BarChart3, CalendarRange, DollarSign, Package2, PlusSquare, Wallet } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import clsx from 'clsx';
 
@@ -8,11 +8,12 @@ const links = [
   { to: '/items/new', label: 'Добавить', icon: PlusSquare },
   { to: '/expenses', label: 'Расходы', icon: Wallet },
   { to: '/sales', label: 'Продажи', icon: DollarSign },
+  { to: '/monthly', label: 'Месяцы', icon: CalendarRange },
 ];
 
 export function MobileNav() {
   return (
-    <nav className="fixed inset-x-3 bottom-3 z-30 grid grid-cols-5 gap-2 rounded-3xl border border-slate-800 bg-slate-950/90 p-2 shadow-2xl backdrop-blur lg:hidden">
+    <nav className="fixed inset-x-2 bottom-3 z-30 grid grid-cols-6 gap-1 rounded-2xl border border-slate-800/90 bg-slate-950/90 p-1.5 shadow-panel backdrop-blur-xl lg:hidden">
       {links.map((link) => {
         const Icon = link.icon;
 
@@ -22,13 +23,15 @@ export function MobileNav() {
             to={link.to}
             className={({ isActive }) =>
               clsx(
-                'flex flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-medium transition',
-                isActive ? 'bg-sky-400 text-slate-950' : 'text-slate-400 hover:bg-slate-900 hover:text-white',
+                'flex min-w-0 flex-col items-center gap-0.5 rounded-xl border px-1 py-2 text-[10px] font-medium transition',
+                isActive
+                  ? 'border-sky-400/30 bg-sky-400/15 text-sky-100'
+                  : 'border-transparent text-slate-400 hover:bg-slate-900/70 hover:text-white',
               )
             }
           >
             <Icon className="h-4 w-4" />
-            <span>{link.label}</span>
+            <span className="max-w-full truncate">{link.label}</span>
           </NavLink>
         );
       })}

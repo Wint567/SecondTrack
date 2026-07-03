@@ -6,6 +6,7 @@ import { AddItem } from '../pages/AddItem';
 import { EditItem } from '../pages/EditItem';
 import { Expenses } from '../pages/Expenses';
 import { Sales } from '../pages/Sales';
+import { MonthlyAnalytics } from '../pages/MonthlyAnalytics';
 import { ErrorState } from '../components/Feedback/ErrorState';
 
 export const router = createBrowserRouter([
@@ -21,6 +22,7 @@ export const router = createBrowserRouter([
       { path: 'items/:id/edit', element: <EditItem /> },
       { path: 'expenses', element: <Expenses /> },
       { path: 'sales', element: <Sales /> },
+      { path: 'monthly', element: <MonthlyAnalytics /> },
     ],
   },
 ]);

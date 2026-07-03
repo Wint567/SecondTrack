@@ -2,9 +2,9 @@ import { ITEM_CATEGORIES, ITEM_STATUSES } from '../../utils/constants';
 
 export function ItemFilters({ filters, onChange }) {
   return (
-    <div className="grid gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 p-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className="grid min-w-0 max-w-full gap-3 rounded-2xl border border-slate-800/90 bg-slate-900/60 p-3 shadow-panel backdrop-blur-xl sm:p-4 md:grid-cols-2 xl:grid-cols-4">
       <select
-        className="select"
+        className="select min-w-0"
         value={filters.status}
         onChange={(event) => onChange('status', event.target.value)}
       >
@@ -17,7 +17,7 @@ export function ItemFilters({ filters, onChange }) {
       </select>
 
       <input
-        className="input"
+        className="input min-w-0"
         type="text"
         placeholder="Фильтр по бренду"
         value={filters.brand}
@@ -25,7 +25,7 @@ export function ItemFilters({ filters, onChange }) {
       />
 
       <select
-        className="select"
+        className="select min-w-0"
         value={filters.category}
         onChange={(event) => onChange('category', event.target.value)}
       >
@@ -38,7 +38,7 @@ export function ItemFilters({ filters, onChange }) {
       </select>
 
       <input
-        className="input"
+        className="input min-w-0"
         type="date"
         value={filters.date}
         onChange={(event) => onChange('date', event.target.value)}

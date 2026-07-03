@@ -84,6 +84,18 @@ export function ItemForm({
       return;
     }
 
+    if (form.status === SOLD_STATUS) {
+      if (!form.actual_sale_price || Number(form.actual_sale_price) <= 0) {
+        setLocalError('Для проданного товара укажите фактическую цену продажи.');
+        return;
+      }
+
+      if (!form.sold_at) {
+        setLocalError('Для проданного товара укажите дату продажи.');
+        return;
+      }
+    }
+
     await onSubmit({
       ...form,
       photos,
@@ -191,6 +203,7 @@ export function ItemForm({
               value={form.sold_at}
               onChange={(event) => updateField('sold_at', event.target.value)}
               disabled={form.status !== SOLD_STATUS}
+              required={form.status === SOLD_STATUS}
             />
           </Field>
 
@@ -229,6 +242,7 @@ export function ItemForm({
               value={form.actual_sale_price}
               onChange={(event) => updateField('actual_sale_price', event.target.value)}
               disabled={form.status !== SOLD_STATUS}
+              required={form.status === SOLD_STATUS}
             />
           </Field>
 
@@ -243,7 +257,13 @@ export function ItemForm({
           </Field>
         </div>
 
-        <Field label="Заметки" htmlFor="notes" error={displayError}>
+        {displayError ? (
+          <div className="rounded-2xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+            {displayError}
+          </div>
+        ) : null}
+
+        <Field label="Заметки" htmlFor="notes">
           <textarea
             id="notes"
             className="textarea"

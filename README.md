@@ -1,13 +1,13 @@
 # SecondTrack
 
-SecondTrack is a production-style MVP for tracking second-hand clothing inventory, expenses, sales, and profit analytics.
+SecondTrack is a demo-mode MVP for tracking second-hand clothing inventory, expenses, sales, and profit analytics.
 
 ## Stack
 
 - React + Vite
 - React Router
 - Tailwind CSS
-- Supabase Auth, Database, and Storage
+- Supabase Database and Storage
 - TanStack Query
 - Recharts
 
@@ -19,15 +19,17 @@ SecondTrack is a production-style MVP for tracking second-hand clothing inventor
 npm install
 ```
 
-2. Copy environment variables:
+2. Create a local `.env` file and add the required Supabase variables:
 
 ```bash
-cp .env.example .env
+VITE_SUPABASE_URL=your-project-url
+VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_SUPABASE_STORAGE_BUCKET=your-storage-bucket
 ```
 
-3. Fill in your Supabase project credentials and create the storage bucket specified in `VITE_SUPABASE_STORAGE_BUCKET`.
+3. Create the storage bucket specified in `VITE_SUPABASE_STORAGE_BUCKET`.
 
-4. Run the SQL from [supabase/schema.sql](/c:/Users/baski/OneDrive/Desktop/SecondTrack/supabase/schema.sql:1) in your Supabase SQL editor.
+4. Run the SQL from `supabase/schema.sql` in your Supabase SQL editor.
 
 5. Start the app:
 
@@ -35,6 +37,8 @@ cp .env.example .env
 npm run dev
 ```
 
-## Auth
+## Demo Mode
 
-The app includes a lightweight email/password auth flow for a single-user setup. Create your first user in Supabase Auth or sign up from the app if email/password signups are enabled.
+The app currently runs without registration or login. It is intended as a demo-mode single workspace while the product is being developed.
+
+Full authentication is not enabled yet. Later, when the project is published as a pet project, the plan is to add authentication and a public read-only viewing mode so visitors can inspect demo data without being able to edit it.

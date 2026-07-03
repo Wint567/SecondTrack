@@ -1,4 +1,4 @@
-import { BarChart3, DollarSign, Package2, PlusSquare, Wallet } from 'lucide-react';
+import { BarChart3, CalendarRange, DollarSign, Package2, PlusSquare, Wallet } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import clsx from 'clsx';
 
@@ -8,14 +8,15 @@ const links = [
   { to: '/items/new', label: 'Добавить вещь', icon: PlusSquare },
   { to: '/expenses', label: 'Расходы', icon: Wallet },
   { to: '/sales', label: 'Продажи', icon: DollarSign },
+  { to: '/monthly', label: 'Месяцы', icon: CalendarRange },
 ];
 
 export function Sidebar() {
   return (
-    <aside className="hidden w-72 flex-col border-r border-slate-800/80 bg-slate-950/90 px-5 py-6 lg:flex">
+    <aside className="hidden w-72 flex-col border-r border-slate-800/80 bg-slate-950/80 px-5 py-6 shadow-panel backdrop-blur-xl lg:flex">
       <div className="mb-10">
-        <div className="inline-flex items-center gap-3 rounded-2xl border border-sky-400/20 bg-sky-500/10 px-4 py-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-400 text-lg font-bold text-slate-950">
+        <div className="inline-flex items-center gap-3 rounded-2xl border border-slate-700/70 bg-slate-900/70 px-4 py-3 shadow-panel">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-sky-400/25 bg-sky-400/15 text-lg font-bold text-sky-300">
             S
           </div>
           <div>
@@ -35,10 +36,10 @@ export function Sidebar() {
               to={link.to}
               className={({ isActive }) =>
                 clsx(
-                  'flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition',
+                  'flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium transition',
                   isActive
-                    ? 'bg-sky-400 text-slate-950 shadow-glow'
-                    : 'text-slate-300 hover:bg-slate-900 hover:text-white',
+                    ? 'border-sky-400/30 bg-sky-400/15 text-sky-100 shadow-glow'
+                    : 'border-transparent text-slate-300 hover:border-slate-700/80 hover:bg-slate-900/70 hover:text-white',
                 )
               }
             >

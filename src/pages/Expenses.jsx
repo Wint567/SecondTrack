@@ -18,6 +18,33 @@ const initialForm = {
   note: '',
 };
 
+function ExpenseCard({ expense }) {
+  return (
+    <article className="rounded-2xl border border-slate-800/90 bg-slate-900/60 p-4 shadow-panel backdrop-blur-xl transition hover:border-slate-700/90">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate font-medium text-white">{expense.type}</p>
+          <p className="mt-1 truncate text-xs text-slate-500">{expense.item?.title || 'Общий расход'}</p>
+        </div>
+        <p className="whitespace-nowrap rounded-xl border border-rose-400/20 bg-rose-400/10 px-2.5 py-1 font-semibold tabular-nums text-rose-200">
+          {formatCurrency(expense.amount)}
+        </p>
+      </div>
+
+      <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+        <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
+          <p className="text-xs text-slate-500">Дата</p>
+          <p className="mt-1 font-medium text-slate-100">{formatDate(expense.expense_date)}</p>
+        </div>
+        <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
+          <p className="text-xs text-slate-500">Комментарий</p>
+          <p className="mt-1 line-clamp-3 text-slate-300">{expense.note || 'Без комментария'}</p>
+        </div>
+      </div>
+    </article>
+  );
+}
+
 export function Expenses() {
   const expensesQuery = useExpenses();
   const itemsQuery = useItems();
@@ -69,8 +96,8 @@ export function Expenses() {
         description="Фиксируйте доставку, чистку, ремонт, комиссии и прочие расходы с привязкой к товару или без неё."
       />
 
-      <div className="grid gap-6 xl:grid-cols-[420px,1fr]">
-        <form onSubmit={handleSubmit} className="card space-y-4">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,420px),minmax(0,1fr)]">
+        <form onSubmit={handleSubmit} className="card space-y-4 xl:sticky xl:top-28 xl:self-start">
           <h3 className="text-lg font-semibold text-white">Добавить расход</h3>
 
           <Field label="Тип расхода" htmlFor="expense-type">
@@ -151,32 +178,40 @@ export function Expenses() {
 
         <DataTableShell title="История расходов" description="Последние операционные расходы по товарам и процессу продажи.">
           {expensesQuery.data?.length ? (
-            <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-800">
+            <>
+              <div className="grid gap-3 md:hidden">
+                {expensesQuery.data.map((expense) => (
+                  <ExpenseCard key={expense.id} expense={expense} />
+                ))}
+              </div>
+
+              <div className="hidden max-w-full overflow-x-auto rounded-2xl border border-slate-800/90 bg-slate-900/60 shadow-panel backdrop-blur-xl md:block">
+                <table className="w-full min-w-[800px] divide-y divide-slate-800">
                   <thead className="bg-slate-950/60 text-left text-xs uppercase tracking-[0.2em] text-slate-500">
                     <tr>
-                      <th className="px-5 py-4">Тип</th>
-                      <th className="px-5 py-4">Товар</th>
-                      <th className="px-5 py-4">Дата</th>
-                      <th className="px-5 py-4">Сумма</th>
-                      <th className="px-5 py-4">Комментарий</th>
+                      <th className="whitespace-nowrap px-4 py-3 sm:px-5 sm:py-4">Тип</th>
+                      <th className="min-w-[220px] px-4 py-3 sm:px-5 sm:py-4">Товар</th>
+                      <th className="whitespace-nowrap px-4 py-3 sm:px-5 sm:py-4">Дата</th>
+                      <th className="whitespace-nowrap px-4 py-3 sm:px-5 sm:py-4">Сумма</th>
+                      <th className="min-w-[220px] px-4 py-3 sm:px-5 sm:py-4">Комментарий</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800 text-sm">
                     {expensesQuery.data.map((expense) => (
                       <tr key={expense.id} className="hover:bg-slate-800/40">
-                        <td className="px-5 py-4 text-white">{expense.type}</td>
-                        <td className="px-5 py-4 text-slate-300">{expense.item?.title || 'Общий расход'}</td>
-                        <td className="px-5 py-4 text-slate-400">{formatDate(expense.expense_date)}</td>
-                        <td className="px-5 py-4 font-medium text-slate-200">{formatCurrency(expense.amount)}</td>
-                        <td className="px-5 py-4 text-slate-400">{expense.note || 'Без комментария'}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-white sm:px-5 sm:py-4">{expense.type}</td>
+                        <td className="px-4 py-3 text-slate-300 sm:px-5 sm:py-4">{expense.item?.title || 'Общий расход'}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-slate-400 sm:px-5 sm:py-4">{formatDate(expense.expense_date)}</td>
+                        <td className="whitespace-nowrap px-4 py-3 font-semibold tabular-nums text-rose-200 sm:px-5 sm:py-4">{formatCurrency(expense.amount)}</td>
+                        <td className="px-4 py-3 text-slate-400 sm:px-5 sm:py-4">
+                          <span className="line-clamp-2">{expense.note || 'Без комментария'}</span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            </div>
+            </>
           ) : (
             <EmptyState title="Расходов пока нет" description="Добавьте первый расход на доставку, ремонт или комиссию, чтобы точнее считать маржу." />
           )}

@@ -27,30 +27,54 @@ export function Dashboard() {
         title="Ключевые показатели по товарам"
         description="Следите за затратами на закупку, выручкой от продаж, расходами и реальной прибылью по всем вещам."
         action={
-          <Link to="/items/new" className="button-primary">
+          <Link to="/items/new" className="button-primary w-full sm:w-auto">
             Добавить вещь
           </Link>
         }
       />
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-        <StatCard label="Сумма закупок" value={formatCurrency(metrics.totalPurchaseAmount)} />
-        <StatCard label="Сумма продаж" value={formatCurrency(metrics.totalSales)} />
-        <StatCard label="Сумма расходов" value={formatCurrency(metrics.totalExpenses)} />
-        <StatCard label="Чистая прибыль" value={formatCurrency(metrics.netProfit)} tone={metrics.netProfit >= 0 ? 'positive' : 'negative'} />
-        <StatCard label="Общий убыток" value={formatCurrency(metrics.totalLoss)} tone={metrics.totalLoss > 0 ? 'negative' : 'default'} />
-        <StatCard label="ROI" value={`${metrics.roi.toFixed(1)}%`} subtext={`Всего товаров: ${metrics.itemsCount}`} tone={metrics.roi >= 0 ? 'positive' : 'negative'} />
+        <StatCard label="Покупки всего" value={formatCurrency(metrics.totalPurchaseAmount)} />
+        <StatCard label="Продажи по товарам" value={formatCurrency(metrics.totalSales)} />
+        <StatCard label="Расходы всего" value={formatCurrency(metrics.totalExpenses)} />
+        <StatCard
+          label="Cashflow"
+          value={formatCurrency(metrics.cashflow)}
+          subtext="Продажи - покупки - расходы"
+          tone={metrics.cashflow >= 0 ? 'positive' : 'negative'}
+        />
+        <StatCard
+          label="Прибыль по продажам"
+          value={formatCurrency(metrics.soldNetProfit)}
+          subtext="Только проданные товары"
+          tone={metrics.soldNetProfit >= 0 ? 'positive' : 'negative'}
+        />
+        <StatCard label="ROI cashflow" value={`${metrics.roi.toFixed(1)}%`} subtext={`Всего товаров: ${metrics.itemsCount}`} tone={metrics.roi >= 0 ? 'positive' : 'negative'} />
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-2">
-        <ChartCard title="Закупки по времени">
-          <LineTrendChart data={metrics.purchaseTrend} stroke="#38bdf8" />
+      <section className="grid gap-5">
+        <ChartCard title="Закупки по месяцам">
+          <LineTrendChart data={metrics.monthlyStats} dataKey="purchaseAmount" stroke="#c9a94f" />
         </ChartCard>
-        <ChartCard title="Продажи по времени">
-          <LineTrendChart data={metrics.salesTrend} stroke="#34d399" />
+        <ChartCard title="Ежемесячный доход">
+          <LineTrendChart data={metrics.monthlyStats} dataKey="salesAmount" stroke="#34d97a" />
         </ChartCard>
-        <ChartCard title="Прибыль по времени">
-          <LineTrendChart data={metrics.profitTrend} stroke="#f59e0b" />
+        <ChartCard title="Cashflow по месяцам">
+          <LineTrendChart data={metrics.monthlyStats} dataKey="cashflow" stroke="#18b862" />
+        </ChartCard>
+        <ChartCard title="Прибыль по проданным товарам">
+          <LineTrendChart data={metrics.monthlyStats} dataKey="soldProfit" stroke="#34d97a" />
+        </ChartCard>
+        <ChartCard title="Товары по месяцам">
+          <LineTrendChart
+            data={metrics.monthlyStats}
+            valueType="number"
+            yAxisWidth={48}
+            lines={[
+              { dataKey: 'itemsCount', name: 'Товаров', stroke: '#c9a94f' },
+              { dataKey: 'soldItemsCount', name: 'Продано', stroke: '#34d97a' },
+            ]}
+          />
         </ChartCard>
         <ChartCard title="Товары по статусам">
           <StatusPieChart data={metrics.statusChart} />

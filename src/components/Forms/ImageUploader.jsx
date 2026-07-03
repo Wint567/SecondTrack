@@ -6,7 +6,7 @@ export function ImageUploader({ previews, onChange }) {
         multiple
         accept="image/*"
         onChange={onChange}
-        className="block w-full rounded-xl border border-dashed border-slate-700 bg-slate-900 p-4 text-sm text-slate-400 file:mr-4 file:rounded-xl file:border-0 file:bg-sky-400 file:px-4 file:py-2 file:font-semibold file:text-slate-950"
+        className="block w-full rounded-xl border border-dashed border-slate-700/90 bg-slate-950/50 p-4 text-sm text-slate-400 file:mr-4 file:rounded-xl file:border-0 file:bg-sky-400 file:px-4 file:py-2 file:font-semibold file:text-slate-950"
       />
 
       {previews.length ? (
@@ -21,7 +21,7 @@ export function ImageUploader({ previews, onChange }) {
           ))}
         </div>
       ) : (
-        <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/50 px-4 py-8 text-center text-sm text-slate-500">
+        <div className="rounded-2xl border border-dashed border-slate-700/90 bg-slate-950/50 px-4 py-8 text-center text-sm text-slate-500">
           Загруженные фотографии появятся здесь перед сохранением.
         </div>
       )}
