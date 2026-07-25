@@ -1,6 +1,7 @@
 import { supabase } from '../services/supabaseClient';
 import { SOLD_STATUS } from '../utils/constants';
 import { normalizeItem } from '../utils/normalizeItem';
+import { requireAuthenticatedSession, toMutationError } from './authApi';
 
 function toNullableNumber(value) {
   if (value === '' || value === null || value === undefined) {
@@ -66,6 +67,8 @@ export async function getItemById(id) {
 }
 
 export async function createItem(payload) {
+  await requireAuthenticatedSession();
+
   const { data, error } = await supabase
     .from('items')
     .insert(buildItemPayload(payload))
@@ -73,13 +76,15 @@ export async function createItem(payload) {
     .single();
 
   if (error) {
-    throw error;
+    throw toMutationError(error);
   }
 
   return data;
 }
 
 export async function updateItem(payload) {
+  await requireAuthenticatedSession();
+
   const { id, ...itemPayload } = payload;
 
   const { data, error } = await supabase
@@ -90,16 +95,18 @@ export async function updateItem(payload) {
     .single();
 
   if (error) {
-    throw error;
+    throw toMutationError(error);
   }
 
   return data;
 }
 
 export async function deleteItemRecord(item) {
+  await requireAuthenticatedSession();
+
   const { error } = await supabase.from('items').delete().eq('id', item.id);
 
   if (error) {
-    throw error;
+    throw toMutationError(error);
   }
 }

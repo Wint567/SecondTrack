@@ -8,9 +8,11 @@ import { PageHeader } from '../components/UI/PageHeader';
 import { StatCard } from '../components/UI/StatCard';
 import { useDashboardMetrics } from '../hooks/useDashboardMetrics';
 import { formatCurrency } from '../utils/formatters';
+import { useAuth } from '../auth/useAuth';
 
 export function Dashboard() {
   const metrics = useDashboardMetrics();
+  const { isAuthenticated } = useAuth();
 
   if (metrics.isLoading) {
     return <LoadingState label="Загрузка дашборда..." />;
@@ -26,11 +28,11 @@ export function Dashboard() {
         eyebrow="Обзор"
         title="Ключевые показатели по товарам"
         description="Следите за затратами на закупку, выручкой от продаж, расходами и реальной прибылью по всем вещам."
-        action={
+        action={isAuthenticated ? (
           <Link to="/items/new" className="button-primary w-full sm:w-auto">
             Добавить вещь
           </Link>
-        }
+        ) : null}
       />
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">

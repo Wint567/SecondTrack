@@ -1,20 +1,29 @@
 import { BarChart3, CalendarRange, DollarSign, Package2, PlusSquare, Wallet } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import clsx from 'clsx';
+import { useAuth } from '../../auth/useAuth';
 
 const links = [
   { to: '/dashboard', label: 'Дашборд', icon: BarChart3 },
   { to: '/items', label: 'Товары', icon: Package2 },
-  { to: '/items/new', label: 'Добавить', icon: PlusSquare },
+  { to: '/items/new', label: 'Добавить', icon: PlusSquare, adminOnly: true },
   { to: '/expenses', label: 'Расходы', icon: Wallet },
   { to: '/sales', label: 'Продажи', icon: DollarSign },
   { to: '/monthly', label: 'Месяцы', icon: CalendarRange },
 ];
 
 export function MobileNav() {
+  const { isAuthenticated } = useAuth();
+  const visibleLinks = links.filter((link) => !link.adminOnly || isAuthenticated);
+
   return (
-    <nav className="fixed inset-x-2 bottom-3 z-30 grid grid-cols-6 gap-1 rounded-2xl border border-slate-800/90 bg-slate-950/90 p-1.5 shadow-panel backdrop-blur-xl lg:hidden">
-      {links.map((link) => {
+    <nav
+      className={clsx(
+        'fixed inset-x-2 bottom-3 z-30 grid gap-1 rounded-2xl border border-slate-800/90 bg-slate-950/90 p-1.5 shadow-panel backdrop-blur-xl lg:hidden',
+        visibleLinks.length === 6 ? 'grid-cols-6' : 'grid-cols-5',
+      )}
+    >
+      {visibleLinks.map((link) => {
         const Icon = link.icon;
 
         return (

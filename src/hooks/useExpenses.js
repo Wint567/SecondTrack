@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabaseClient';
+import { requireAuthenticatedSession, toMutationError } from '../api/authApi';
 
 async function fetchExpenses() {
   const { data, error } = await supabase
@@ -15,6 +16,8 @@ async function fetchExpenses() {
 }
 
 async function createExpense(payload) {
+  await requireAuthenticatedSession();
+
   const normalizedType = payload.type?.trim();
   const normalizedAmount = Number(payload.amount);
 
@@ -39,7 +42,7 @@ async function createExpense(payload) {
     .single();
 
   if (error) {
-    throw error;
+    throw toMutationError(error);
   }
 
   return data;

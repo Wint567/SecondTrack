@@ -1,4 +1,5 @@
 import { STORAGE_BUCKET, supabase } from '../services/supabaseClient';
+import { requireAuthenticatedSession, toMutationError } from './authApi';
 
 function extractStoragePathFromUrl(imageUrl) {
   if (!imageUrl) {
@@ -25,7 +26,7 @@ async function uploadItemPhoto(file, itemId) {
   });
 
   if (uploadError) {
-    throw uploadError;
+    throw toMutationError(uploadError);
   }
 
   const {
@@ -38,7 +39,7 @@ async function uploadItemPhoto(file, itemId) {
   });
 
   if (photoError) {
-    throw photoError;
+    throw toMutationError(photoError);
   }
 }
 
@@ -47,26 +48,30 @@ export async function uploadItemPhotos({ itemId, photos }) {
     return;
   }
 
+  await requireAuthenticatedSession();
+
   for (const photo of photos) {
     await uploadItemPhoto(photo, itemId);
   }
 }
 
 export async function deletePhoto(photo) {
+  await requireAuthenticatedSession();
+
   const path = extractStoragePathFromUrl(photo.image_url);
 
   if (path) {
     const { error: storageError } = await supabase.storage.from(STORAGE_BUCKET).remove([path]);
 
     if (storageError) {
-      throw storageError;
+      throw toMutationError(storageError);
     }
   }
 
   const { error } = await supabase.from('item_photos').delete().eq('id', photo.id);
 
   if (error) {
-    throw error;
+    throw toMutationError(error);
   }
 }
 
@@ -79,9 +84,11 @@ export async function deleteItemPhotos(item) {
     return;
   }
 
+  await requireAuthenticatedSession();
+
   const { error } = await supabase.storage.from(STORAGE_BUCKET).remove(paths);
 
   if (error) {
-    throw error;
+    throw toMutationError(error);
   }
 }

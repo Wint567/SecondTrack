@@ -1,17 +1,21 @@
 import { BarChart3, CalendarRange, DollarSign, Package2, PlusSquare, Wallet } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import clsx from 'clsx';
+import { useAuth } from '../../auth/useAuth';
 
 const links = [
   { to: '/dashboard', label: 'Дашборд', icon: BarChart3 },
   { to: '/items', label: 'Товары', icon: Package2 },
-  { to: '/items/new', label: 'Добавить вещь', icon: PlusSquare },
+  { to: '/items/new', label: 'Добавить вещь', icon: PlusSquare, adminOnly: true },
   { to: '/expenses', label: 'Расходы', icon: Wallet },
   { to: '/sales', label: 'Продажи', icon: DollarSign },
   { to: '/monthly', label: 'Месяцы', icon: CalendarRange },
 ];
 
 export function Sidebar() {
+  const { isAuthenticated } = useAuth();
+  const visibleLinks = links.filter((link) => !link.adminOnly || isAuthenticated);
+
   return (
     <aside className="hidden w-72 flex-col border-r border-slate-800/80 bg-slate-950/80 px-5 py-6 shadow-panel backdrop-blur-xl lg:flex">
       <div className="mb-10">
@@ -27,7 +31,7 @@ export function Sidebar() {
       </div>
 
       <nav className="space-y-2">
-        {links.map((link) => {
+        {visibleLinks.map((link) => {
           const Icon = link.icon;
 
           return (

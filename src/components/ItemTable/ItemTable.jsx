@@ -23,7 +23,7 @@ function ItemPreview({ item, size = 'table' }) {
   );
 }
 
-function ItemMobileCard({ item, deletingItemId, onDelete }) {
+function ItemMobileCard({ item, deletingItemId, onDelete, canManage }) {
   return (
     <article className="rounded-2xl border border-slate-800/90 bg-slate-900/60 p-4 shadow-panel backdrop-blur-xl transition hover:border-slate-700/90">
       <div className="flex gap-3">
@@ -60,24 +60,26 @@ function ItemMobileCard({ item, deletingItemId, onDelete }) {
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <Link to={`/items/${item.id}/edit`} className="button-secondary px-3 py-2 text-xs">
-          Редактировать
-        </Link>
-        <button
-          type="button"
-          className="button-secondary border-rose-500/30 px-3 py-2 text-xs text-rose-300 hover:border-rose-400/40 hover:bg-rose-500/10"
-          onClick={() => onDelete(item)}
-          disabled={deletingItemId === item.id}
-        >
-          {deletingItemId === item.id ? 'Удаление...' : 'Удалить'}
-        </button>
-      </div>
+      {canManage ? (
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          <Link to={`/items/${item.id}/edit`} className="button-secondary px-3 py-2 text-xs">
+            Редактировать
+          </Link>
+          <button
+            type="button"
+            className="button-secondary border-rose-500/30 px-3 py-2 text-xs text-rose-300 hover:border-rose-400/40 hover:bg-rose-500/10"
+            onClick={() => onDelete(item)}
+            disabled={deletingItemId === item.id}
+          >
+            {deletingItemId === item.id ? 'Удаление...' : 'Удалить'}
+          </button>
+        </div>
+      ) : null}
     </article>
   );
 }
 
-export function ItemTable({ items, deletingItemId = null, onDelete }) {
+export function ItemTable({ items, deletingItemId = null, onDelete, canManage = false }) {
   return (
     <>
       <div className="grid gap-3 md:grid-cols-2 xl:hidden">
@@ -87,12 +89,13 @@ export function ItemTable({ items, deletingItemId = null, onDelete }) {
             item={item}
             deletingItemId={deletingItemId}
             onDelete={onDelete}
+            canManage={canManage}
           />
         ))}
       </div>
 
       <div className="hidden w-full max-w-full overflow-x-auto overscroll-x-contain rounded-2xl border border-slate-800/90 bg-slate-900/60 shadow-panel backdrop-blur-xl xl:block">
-        <table className="w-full min-w-[940px] table-fixed divide-y divide-slate-800">
+        <table className={`w-full table-fixed divide-y divide-slate-800 ${canManage ? 'min-w-[940px]' : 'min-w-[840px]'}`}>
           <colgroup>
             <col className="w-[76px]" />
             <col className="w-[240px]" />
@@ -101,7 +104,7 @@ export function ItemTable({ items, deletingItemId = null, onDelete }) {
             <col className="w-[100px]" />
             <col className="w-[106px]" />
             <col className="w-[114px]" />
-            <col className="w-[92px]" />
+            {canManage ? <col className="w-[92px]" /> : null}
           </colgroup>
           <thead className="bg-slate-950/60 text-left text-[11px] uppercase tracking-[0.12em] text-slate-500">
             <tr>
@@ -112,7 +115,7 @@ export function ItemTable({ items, deletingItemId = null, onDelete }) {
               <th className="whitespace-nowrap px-3 py-3">Расходы</th>
               <th className="whitespace-nowrap px-3 py-3">Прибыль</th>
               <th className="whitespace-nowrap px-3 py-3">Статус</th>
-              <th className="whitespace-nowrap px-3 py-3 text-center">Действия</th>
+              {canManage ? <th className="whitespace-nowrap px-3 py-3 text-center">Действия</th> : null}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800 text-sm">
@@ -136,28 +139,30 @@ export function ItemTable({ items, deletingItemId = null, onDelete }) {
                 <td className="whitespace-nowrap px-3 py-3">
                   <StatusBadge status={item.status} />
                 </td>
-                <td className="px-3 py-3">
-                  <div className="flex justify-center gap-2">
-                    <Link
-                      to={`/items/${item.id}/edit`}
-                      className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-xl border border-slate-700 bg-slate-900 text-sky-300 transition hover:border-sky-400 hover:bg-slate-800"
-                      title="Редактировать"
-                      aria-label={`Редактировать ${item.title}`}
-                    >
-                      <Pencil className="h-5 w-5" strokeWidth={2.25} />
-                    </Link>
-                    <button
-                      type="button"
-                      className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-xl border border-rose-500/30 bg-slate-900 text-rose-300 transition hover:border-rose-400/40 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-60"
-                      onClick={() => onDelete(item)}
-                      disabled={deletingItemId === item.id}
-                      title="Удалить"
-                      aria-label={`Удалить ${item.title}`}
-                    >
-                      <Trash2 className="h-5 w-5" strokeWidth={2.25} />
-                    </button>
-                  </div>
-                </td>
+                {canManage ? (
+                  <td className="px-3 py-3">
+                    <div className="flex justify-center gap-2">
+                      <Link
+                        to={`/items/${item.id}/edit`}
+                        className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-xl border border-slate-700 bg-slate-900 text-sky-300 transition hover:border-sky-400 hover:bg-slate-800"
+                        title="Редактировать"
+                        aria-label={`Редактировать ${item.title}`}
+                      >
+                        <Pencil className="h-5 w-5" strokeWidth={2.25} />
+                      </Link>
+                      <button
+                        type="button"
+                        className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-xl border border-rose-500/30 bg-slate-900 text-rose-300 transition hover:border-rose-400/40 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                        onClick={() => onDelete(item)}
+                        disabled={deletingItemId === item.id}
+                        title="Удалить"
+                        aria-label={`Удалить ${item.title}`}
+                      >
+                        <Trash2 className="h-5 w-5" strokeWidth={2.25} />
+                      </button>
+                    </div>
+                  </td>
+                ) : null}
               </tr>
             ))}
           </tbody>

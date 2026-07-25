@@ -9,6 +9,8 @@ import { useCreateExpense, useExpenses } from '../hooks/useExpenses';
 import { useItems } from '../hooks/useItems';
 import { EXPENSE_TYPES } from '../utils/constants';
 import { formatCurrency, formatDate } from '../utils/formatters';
+import { useAuth } from '../auth/useAuth';
+import { ReadOnlyNotice } from '../components/Auth/ReadOnlyNotice';
 
 const initialForm = {
   item_id: null,
@@ -46,6 +48,7 @@ function ExpenseCard({ expense }) {
 }
 
 export function Expenses() {
+  const { isAuthenticated } = useAuth();
   const expensesQuery = useExpenses();
   const itemsQuery = useItems();
   const createExpense = useCreateExpense();
@@ -57,6 +60,11 @@ export function Expenses() {
   async function handleSubmit(event) {
     event.preventDefault();
     setError('');
+
+    if (!isAuthenticated) {
+      setError('Войдите как администратор, чтобы добавлять расходы.');
+      return;
+    }
 
     if (!form.type?.trim()) {
       setError('Укажите тип расхода.');
@@ -96,8 +104,9 @@ export function Expenses() {
         description="Фиксируйте доставку, чистку, ремонт, комиссии и прочие расходы с привязкой к товару или без неё."
       />
 
-      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,420px),minmax(0,1fr)]">
-        <form onSubmit={handleSubmit} className="card space-y-4 xl:sticky xl:top-28 xl:self-start">
+      <div className={isAuthenticated ? 'grid min-w-0 gap-6 xl:grid-cols-[minmax(0,420px),minmax(0,1fr)]' : 'min-w-0 space-y-4'}>
+        {isAuthenticated ? (
+          <form onSubmit={handleSubmit} className="card space-y-4 xl:sticky xl:top-28 xl:self-start">
           <h3 className="text-lg font-semibold text-white">Добавить расход</h3>
 
           <Field label="Тип расхода" htmlFor="expense-type">
@@ -174,7 +183,10 @@ export function Expenses() {
           <button type="submit" className="button-primary w-full" disabled={createExpense.isPending}>
             {createExpense.isPending ? 'Сохранение...' : 'Сохранить расход'}
           </button>
-        </form>
+          </form>
+        ) : (
+          <ReadOnlyNotice description="История расходов доступна для просмотра. Добавлять расходы может только администратор после входа." />
+        )}
 
         <DataTableShell title="История расходов" description="Последние операционные расходы по товарам и процессу продажи.">
           {expensesQuery.data?.length ? (
@@ -213,7 +225,10 @@ export function Expenses() {
               </div>
             </>
           ) : (
-            <EmptyState title="Расходов пока нет" description="Добавьте первый расход на доставку, ремонт или комиссию, чтобы точнее считать маржу." />
+            <EmptyState
+              title="Расходов пока нет"
+              description={isAuthenticated ? 'Добавьте первый расход на доставку, ремонт или комиссию, чтобы точнее считать маржу.' : 'В публичном режиме здесь появится история учтённых расходов.'}
+            />
           )}
         </DataTableShell>
       </div>

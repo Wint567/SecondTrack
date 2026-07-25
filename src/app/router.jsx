@@ -7,7 +7,9 @@ import { EditItem } from '../pages/EditItem';
 import { Expenses } from '../pages/Expenses';
 import { Sales } from '../pages/Sales';
 import { MonthlyAnalytics } from '../pages/MonthlyAnalytics';
+import { Login } from '../pages/Login';
 import { ErrorState } from '../components/Feedback/ErrorState';
+import { RequireAuth } from '../auth/RequireAuth';
 
 export const router = createBrowserRouter([
   {
@@ -18,8 +20,9 @@ export const router = createBrowserRouter([
       { index: true, element: <Navigate to="/dashboard" replace /> },
       { path: 'dashboard', element: <Dashboard /> },
       { path: 'items', element: <Items /> },
-      { path: 'items/new', element: <AddItem /> },
-      { path: 'items/:id/edit', element: <EditItem /> },
+      { path: 'login', element: <Login /> },
+      { path: 'items/new', element: <RequireAuth><AddItem /></RequireAuth> },
+      { path: 'items/:id/edit', element: <RequireAuth><EditItem /></RequireAuth> },
       { path: 'expenses', element: <Expenses /> },
       { path: 'sales', element: <Sales /> },
       { path: 'monthly', element: <MonthlyAnalytics /> },

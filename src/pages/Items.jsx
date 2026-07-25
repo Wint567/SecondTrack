@@ -10,8 +10,10 @@ import { PageHeader } from '../components/UI/PageHeader';
 import { ToastMessage } from '../components/UI/ToastMessage';
 import { useItemFilters } from '../hooks/useItemFilters';
 import { useDeleteItem, useItems } from '../hooks/useItems';
+import { useAuth } from '../auth/useAuth';
 
 export function Items() {
+  const { isAuthenticated } = useAuth();
   const itemsQuery = useItems();
   const deleteItem = useDeleteItem();
   const { filters, setFilters, filteredItems } = useItemFilters(itemsQuery.data ?? []);
@@ -19,6 +21,11 @@ export function Items() {
   const [toast, setToast] = useState(null);
 
   function handleDeleteRequest(item) {
+    if (!isAuthenticated) {
+      setToast({ tone: 'error', message: 'Войдите как администратор, чтобы удалять товары.' });
+      return;
+    }
+
     setItemToDelete(item);
   }
 
@@ -52,11 +59,11 @@ export function Items() {
         eyebrow="Товары"
         title="Все добавленные вещи"
         description="Фильтруйте и просматривайте закупки, продажи, расходы и прибыль в одной таблице."
-        action={
+        action={isAuthenticated ? (
           <Link to="/items/new" className="button-primary w-full sm:w-auto">
             Добавить вещь
           </Link>
-        }
+        ) : null}
       />
 
       <ItemFilters
@@ -69,21 +76,22 @@ export function Items() {
           items={filteredItems}
           deletingItemId={deleteItem.variables?.id ?? null}
           onDelete={handleDeleteRequest}
+          canManage={isAuthenticated}
         />
       ) : (
         <EmptyState
           title="По выбранным фильтрам ничего не найдено"
-          description="Сбросьте фильтры или добавьте новую вещь, чтобы начать учёт."
-          action={
+          description={isAuthenticated ? 'Сбросьте фильтры или добавьте новую вещь, чтобы начать учёт.' : 'Сбросьте фильтры, чтобы вернуться к доступным товарам.'}
+          action={isAuthenticated ? (
             <Link to="/items/new" className="button-primary w-full sm:w-auto">
               Добавить вещь
             </Link>
-          }
+          ) : null}
         />
       )}
 
       <ConfirmDialog
-        open={Boolean(itemToDelete)}
+        open={isAuthenticated && Boolean(itemToDelete)}
         title="Удалить вещь?"
         description={itemToDelete ? `Вещь “${itemToDelete.title}” и её фотографии будут удалены.` : ''}
         confirmLabel="Удалить"

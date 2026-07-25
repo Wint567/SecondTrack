@@ -1,6 +1,6 @@
 # SecondTrack
 
-SecondTrack is a demo-mode MVP for tracking second-hand clothing inventory, expenses, sales, and profit analytics.
+SecondTrack is a public read-only demo for tracking second-hand clothing inventory, expenses, sales, and profit analytics. A pre-created owner account can sign in to manage data.
 
 ## Stack
 
@@ -29,7 +29,7 @@ VITE_SUPABASE_STORAGE_BUCKET=your-storage-bucket
 
 3. Create the storage bucket specified in `VITE_SUPABASE_STORAGE_BUCKET`.
 
-4. Run the SQL from `supabase/schema.sql` in your Supabase SQL editor.
+4. Run the SQL from `supabase/schema.sql` for a fresh project. For the existing project, apply the files from `supabase/migrations` in timestamp order.
 
 5. Start the app:
 
@@ -37,8 +37,11 @@ VITE_SUPABASE_STORAGE_BUCKET=your-storage-bucket
 npm run dev
 ```
 
-## Demo Mode
+## Access Model
 
-The app currently runs without registration or login. It is intended as a demo-mode single workspace while the product is being developed.
+- Visitors can browse the dashboard, items, expenses, sales, monthly analytics, and photos without signing in.
+- Only an authenticated owner can create, update, or delete data.
+- Public registration is intentionally not available in the application.
+- Owner credentials are created and managed in Supabase Auth, never in this repository.
 
-Full authentication is not enabled yet. Later, when the project is published as a pet project, the plan is to add authentication and a public read-only viewing mode so visitors can inspect demo data without being able to edit it.
+The frontend uses only the Supabase publishable/anon key. Write protection is enforced by Row Level Security after the included migration is applied.
