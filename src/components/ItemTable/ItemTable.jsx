@@ -2,6 +2,31 @@ import { Pencil, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { StatusBadge } from '../UI/StatusBadge';
 import { formatCurrency } from '../../utils/formatters';
+import { BOUGHT_STATUS, LISTED_STATUS } from '../../utils/constants';
+
+function getPublicationState(item) {
+  if (!item.is_public) {
+    return {
+      label: 'Черновик',
+      className: 'border-slate-700 bg-slate-950/70 text-slate-400',
+      textClassName: 'text-slate-500',
+    };
+  }
+
+  if ([BOUGHT_STATUS, LISTED_STATUS].includes(item.status)) {
+    return {
+      label: 'В магазине',
+      className: 'border-emerald-400/25 bg-emerald-400/10 text-emerald-200',
+      textClassName: 'text-emerald-300',
+    };
+  }
+
+  return {
+    label: 'Скрыт по статусу',
+    className: 'border-amber-400/25 bg-amber-400/10 text-amber-200',
+    textClassName: 'text-amber-300',
+  };
+}
 
 function ItemPreview({ item, size = 'table' }) {
   const imageClassName = size === 'card' ? 'h-20 w-20' : 'h-14 w-14';
@@ -24,6 +49,8 @@ function ItemPreview({ item, size = 'table' }) {
 }
 
 function ItemMobileCard({ item, deletingItemId, onDelete, canManage }) {
+  const publicationState = getPublicationState(item);
+
   return (
     <article className="rounded-2xl border border-slate-800/90 bg-slate-900/60 p-4 shadow-panel backdrop-blur-xl transition hover:border-slate-700/90">
       <div className="flex gap-3">
@@ -33,8 +60,13 @@ function ItemMobileCard({ item, deletingItemId, onDelete, canManage }) {
           <p className="mt-1 text-xs text-slate-500">
             {[item.brand, item.category, item.size].filter(Boolean).join(' • ') || 'Без категории'}
           </p>
-          <div className="mt-3">
+          <div className="mt-3 flex flex-wrap items-center gap-2">
             <StatusBadge status={item.status} />
+            {canManage ? (
+              <span className={`rounded-full border px-2 py-1 text-xs font-semibold ${publicationState.className}`}>
+                {publicationState.label}
+              </span>
+            ) : null}
           </div>
         </div>
       </div>
@@ -119,52 +151,61 @@ export function ItemTable({ items, deletingItemId = null, onDelete, canManage = 
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800 text-sm">
-            {items.map((item) => (
-              <tr key={item.id} className="hover:bg-slate-800/40">
-                <td className="px-3 py-3">
-                  <ItemPreview item={item} />
-                </td>
-                <td className="min-w-0 px-3 py-3">
-                  <p className="truncate font-medium text-white">{item.title}</p>
-                  <p className="truncate text-xs text-slate-500">
-                    {[item.brand, item.category, item.size].filter(Boolean).join(' • ') || 'Без категории'}
-                  </p>
-                </td>
-                <td className="whitespace-nowrap px-3 py-3 tabular-nums text-slate-200">{formatCurrency(item.purchase_price)}</td>
-                <td className="whitespace-nowrap px-3 py-3 tabular-nums text-slate-200">{formatCurrency(item.actual_sale_price || item.planned_sale_price)}</td>
-                <td className="whitespace-nowrap px-3 py-3 tabular-nums text-slate-200">{formatCurrency(item.total_expenses)}</td>
-                <td className={`whitespace-nowrap px-3 py-3 font-semibold tabular-nums ${item.profit >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
-                  {formatCurrency(item.profit)}
-                </td>
-                <td className="whitespace-nowrap px-3 py-3">
-                  <StatusBadge status={item.status} />
-                </td>
-                {canManage ? (
+            {items.map((item) => {
+              const publicationState = getPublicationState(item);
+
+              return (
+                <tr key={item.id} className="hover:bg-slate-800/40">
                   <td className="px-3 py-3">
-                    <div className="flex justify-center gap-2">
-                      <Link
-                        to={`/items/${item.id}/edit`}
-                        className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-xl border border-slate-700 bg-slate-900 text-sky-300 transition hover:border-sky-400 hover:bg-slate-800"
-                        title="Редактировать"
-                        aria-label={`Редактировать ${item.title}`}
-                      >
-                        <Pencil className="h-5 w-5" strokeWidth={2.25} />
-                      </Link>
-                      <button
-                        type="button"
-                        className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-xl border border-rose-500/30 bg-slate-900 text-rose-300 transition hover:border-rose-400/40 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-60"
-                        onClick={() => onDelete(item)}
-                        disabled={deletingItemId === item.id}
-                        title="Удалить"
-                        aria-label={`Удалить ${item.title}`}
-                      >
-                        <Trash2 className="h-5 w-5" strokeWidth={2.25} />
-                      </button>
-                    </div>
+                    <ItemPreview item={item} />
                   </td>
-                ) : null}
-              </tr>
-            ))}
+                  <td className="min-w-0 px-3 py-3">
+                    <p className="truncate font-medium text-white">{item.title}</p>
+                    <p className="truncate text-xs text-slate-500">
+                      {[item.brand, item.category, item.size].filter(Boolean).join(' • ') || 'Без категории'}
+                    </p>
+                    {canManage ? (
+                      <p className={`mt-1 text-xs font-medium ${publicationState.textClassName}`}>
+                        {publicationState.label}
+                      </p>
+                    ) : null}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 tabular-nums text-slate-200">{formatCurrency(item.purchase_price)}</td>
+                  <td className="whitespace-nowrap px-3 py-3 tabular-nums text-slate-200">{formatCurrency(item.actual_sale_price || item.planned_sale_price)}</td>
+                  <td className="whitespace-nowrap px-3 py-3 tabular-nums text-slate-200">{formatCurrency(item.total_expenses)}</td>
+                  <td className={`whitespace-nowrap px-3 py-3 font-semibold tabular-nums ${item.profit >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                    {formatCurrency(item.profit)}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3">
+                    <StatusBadge status={item.status} />
+                  </td>
+                  {canManage ? (
+                    <td className="px-3 py-3">
+                      <div className="flex justify-center gap-2">
+                        <Link
+                          to={`/items/${item.id}/edit`}
+                          className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-xl border border-slate-700 bg-slate-900 text-sky-300 transition hover:border-sky-400 hover:bg-slate-800"
+                          title="Редактировать"
+                          aria-label={`Редактировать ${item.title}`}
+                        >
+                          <Pencil className="h-5 w-5" strokeWidth={2.25} />
+                        </Link>
+                        <button
+                          type="button"
+                          className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-xl border border-rose-500/30 bg-slate-900 text-rose-300 transition hover:border-rose-400/40 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                          onClick={() => onDelete(item)}
+                          disabled={deletingItemId === item.id}
+                          title="Удалить"
+                          aria-label={`Удалить ${item.title}`}
+                        >
+                          <Trash2 className="h-5 w-5" strokeWidth={2.25} />
+                        </button>
+                      </div>
+                    </td>
+                  ) : null}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

@@ -5,8 +5,6 @@ const STATUS_STYLES = {
   Куплено: 'border-slate-600/70 bg-slate-800/70 text-slate-200 before:bg-slate-300',
   Выставлено: 'border-sky-400/30 bg-sky-400/10 text-sky-100 before:bg-sky-300',
   [SOLD_STATUS]: 'border-emerald-400/30 bg-emerald-400/10 text-emerald-100 before:bg-emerald-300',
-  Подготовлено: 'border-cyan-300/25 bg-cyan-300/10 text-cyan-100 before:bg-cyan-300',
-  'Не продано': 'border-rose-400/30 bg-rose-400/10 text-rose-100 before:bg-rose-300',
   Утеряно: 'border-rose-500/30 bg-rose-500/10 text-rose-100 before:bg-rose-400',
 };
 

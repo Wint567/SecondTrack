@@ -1,6 +1,6 @@
 import { ITEM_CATEGORIES, ITEM_STATUSES } from '../../utils/constants';
 
-export function ItemFilters({ filters, onChange }) {
+export function ItemFilters({ filters, onChange, categoryOptions = ITEM_CATEGORIES }) {
   return (
     <div className="grid min-w-0 max-w-full gap-3 rounded-2xl border border-slate-800/90 bg-slate-900/60 p-3 shadow-panel backdrop-blur-xl sm:p-4 md:grid-cols-2 xl:grid-cols-4">
       <select
@@ -30,7 +30,7 @@ export function ItemFilters({ filters, onChange }) {
         onChange={(event) => onChange('category', event.target.value)}
       >
         <option value="">Все категории</option>
-        {ITEM_CATEGORIES.map((category) => (
+        {categoryOptions.map((category) => (
           <option key={category} value={category}>
             {category}
           </option>

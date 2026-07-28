@@ -1,19 +1,23 @@
-import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { LoadingState } from '../components/Feedback/LoadingState';
 import { ErrorState } from '../components/Feedback/ErrorState';
 import { PageHeader } from '../components/UI/PageHeader';
 import { ItemForm, buildItemFormState } from '../components/Forms/ItemForm';
-import { useAddItemPhotos, useDeletePhoto, useItem, useUpdateItem } from '../hooks/useItems';
+import { useDeletePhoto, useItem, useUpdateItem } from '../hooks/useItems';
 
 export function EditItem() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const itemQuery = useItem(id);
   const updateItem = useUpdateItem();
-  const addPhotos = useAddItemPhotos();
   const deletePhoto = useDeletePhoto();
-  const [error, setError] = useState('');
+  const [error, setError] = useState(location.state?.submissionError ?? '');
+  const initialValues = useMemo(
+    () => buildItemFormState(itemQuery.data),
+    [itemQuery.data],
+  );
 
   if (itemQuery.isLoading) {
     return <LoadingState label="Загрузка вещи..." />;
@@ -32,13 +36,6 @@ export function EditItem() {
         ...values,
       });
 
-      if (values.photos?.length) {
-        await addPhotos.mutateAsync({
-          itemId: id,
-          photos: values.photos,
-        });
-      }
-
       navigate('/items');
     } catch (submissionError) {
       setError(submissionError.message || 'Не удалось сохранить изменения.');
@@ -47,7 +44,10 @@ export function EditItem() {
 
   async function handleDeletePhoto(photo) {
     try {
-      await deletePhoto.mutateAsync(photo);
+      await deletePhoto.mutateAsync({
+        item: itemQuery.data,
+        photo,
+      });
     } catch (photoError) {
       setError(photoError.message || 'Не удалось удалить фото.');
     }
@@ -63,15 +63,15 @@ export function EditItem() {
 
       <ItemForm
         mode="edit"
-        initialValues={buildItemFormState(itemQuery.data)}
+        initialValues={initialValues}
         existingPhotos={itemQuery.data?.item_photos ?? []}
         submitLabel="Сохранить изменения"
         submitPendingLabel="Сохранение изменений..."
         onSubmit={handleSubmit}
         onDeletePhoto={handleDeletePhoto}
         onAddPhotosLabel="Добавить фото"
-        isSubmitting={updateItem.isPending || addPhotos.isPending}
-        deletingPhotoId={deletePhoto.variables?.id ?? null}
+        isSubmitting={updateItem.isPending}
+        deletingPhotoId={deletePhoto.variables?.photo?.id ?? null}
         error={error}
       />
     </div>

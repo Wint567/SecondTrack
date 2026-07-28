@@ -16,6 +16,13 @@ export function AddItem() {
       await createItem.mutateAsync(values);
       navigate('/items');
     } catch (submissionError) {
+      if (submissionError.draftItemId) {
+        navigate(`/items/${submissionError.draftItemId}/edit`, {
+          state: { submissionError: submissionError.message },
+        });
+        return;
+      }
+
       setError(submissionError.message || 'Не удалось сохранить вещь.');
     }
   }
@@ -25,7 +32,7 @@ export function AddItem() {
       <PageHeader
         eyebrow="Новая вещь"
         title="Добавить вещь"
-        description="Заполните детали закупки, цены, текущий статус и загрузите фотографии товара."
+        description="Заполните данные для будущего магазина, внутреннего учёта и загрузите фотографии товара."
       />
 
       <ItemForm

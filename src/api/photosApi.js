@@ -33,26 +33,36 @@ async function uploadItemPhoto(file, itemId) {
     data: { publicUrl },
   } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(fileName);
 
-  const { error: photoError } = await supabase.from('item_photos').insert({
-    item_id: itemId,
-    image_url: publicUrl,
-  });
+  const { data, error: photoError } = await supabase
+    .from('item_photos')
+    .insert({
+      item_id: itemId,
+      image_url: publicUrl,
+    })
+    .select()
+    .single();
 
   if (photoError) {
+    await supabase.storage.from(STORAGE_BUCKET).remove([fileName]);
     throw toMutationError(photoError);
   }
+
+  return data;
 }
 
 export async function uploadItemPhotos({ itemId, photos }) {
   if (!photos?.length) {
-    return;
+    return [];
   }
 
   await requireAuthenticatedSession();
+  const uploadedPhotos = [];
 
   for (const photo of photos) {
-    await uploadItemPhoto(photo, itemId);
+    uploadedPhotos.push(await uploadItemPhoto(photo, itemId));
   }
+
+  return uploadedPhotos;
 }
 
 export async function deletePhoto(photo) {

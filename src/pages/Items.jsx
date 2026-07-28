@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { EmptyState } from '../components/Feedback/EmptyState';
 import { ErrorState } from '../components/Feedback/ErrorState';
@@ -11,6 +11,7 @@ import { ToastMessage } from '../components/UI/ToastMessage';
 import { useItemFilters } from '../hooks/useItemFilters';
 import { useDeleteItem, useItems } from '../hooks/useItems';
 import { useAuth } from '../auth/useAuth';
+import { ITEM_CATEGORIES } from '../utils/constants';
 
 export function Items() {
   const { isAuthenticated } = useAuth();
@@ -19,6 +20,13 @@ export function Items() {
   const { filters, setFilters, filteredItems } = useItemFilters(itemsQuery.data ?? []);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [toast, setToast] = useState(null);
+  const categoryOptions = useMemo(() => {
+    const savedCategories = (itemsQuery.data ?? [])
+      .map((item) => item.category)
+      .filter(Boolean);
+
+    return [...new Set([...ITEM_CATEGORIES, ...savedCategories])];
+  }, [itemsQuery.data]);
 
   function handleDeleteRequest(item) {
     if (!isAuthenticated) {
@@ -68,6 +76,7 @@ export function Items() {
 
       <ItemFilters
         filters={filters}
+        categoryOptions={categoryOptions}
         onChange={(key, value) => setFilters((current) => ({ ...current, [key]: value }))}
       />
 
