@@ -28,6 +28,10 @@ export function getItemValidationError(item, photoCount = 0) {
     if (!item.sold_at) {
       return 'Для проданного товара укажите дату продажи.';
     }
+
+    if (item.purchase_date && item.sold_at < item.purchase_date) {
+      return 'Дата продажи не может быть раньше даты покупки.';
+    }
   }
 
   if (item.vinted_url?.trim() && !item.vinted_url.trim().startsWith('https://')) {

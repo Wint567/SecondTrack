@@ -9,7 +9,11 @@ export function ToastMessage({ message, tone = 'info', onClose }) {
       : 'border-sky-400/25 bg-sky-400/10 text-sky-100';
 
   return (
-    <div className="fixed right-4 top-4 z-50 w-[calc(100%-2rem)] max-w-sm">
+    <div
+      role={tone === 'error' ? 'alert' : 'status'}
+      aria-live={tone === 'error' ? 'assertive' : 'polite'}
+      className="fixed right-4 top-4 z-50 w-[calc(100%-2rem)] max-w-sm"
+    >
       <div className={`rounded-2xl border px-4 py-3 shadow-panel backdrop-blur-xl ${toneClass}`}>
         <div className="flex items-start justify-between gap-3">
           <p className="text-sm">{message}</p>

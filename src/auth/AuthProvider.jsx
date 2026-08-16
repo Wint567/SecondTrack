@@ -78,6 +78,7 @@ export function AuthProvider({ children }) {
       isAuthenticated: Boolean(session?.user),
       isLoading,
       authError,
+      clearAuthError: () => setAuthError(''),
       signIn: signInAdmin,
       signOut: signOutAdmin,
     }),

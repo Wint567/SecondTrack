@@ -13,7 +13,7 @@ export default defineConfig({
           react: ['react', 'react-dom', 'react-router-dom'],
           charts: ['recharts'],
           supabase: ['@supabase/supabase-js'],
-      query: ['@tanstack/react-query'],
+          query: ['@tanstack/react-query'],
         },
       },
     },

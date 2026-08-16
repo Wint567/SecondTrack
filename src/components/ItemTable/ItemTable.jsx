@@ -1,8 +1,9 @@
 import { Pencil, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { StatusBadge } from '../UI/StatusBadge';
+import { ItemImage } from '../UI/ItemImage';
 import { formatCurrency } from '../../utils/formatters';
-import { BOUGHT_STATUS, LISTED_STATUS } from '../../utils/constants';
+import { BOUGHT_STATUS, LISTED_STATUS, LOST_STATUS, SOLD_STATUS } from '../../utils/constants';
 
 function getPublicationState(item) {
   if (!item.is_public) {
@@ -28,28 +29,26 @@ function getPublicationState(item) {
   };
 }
 
+function formatSalePrice(item) {
+  const salePrice = item.actual_sale_price ?? item.planned_sale_price;
+  return salePrice === null || salePrice === undefined ? '—' : formatCurrency(salePrice);
+}
+
 function ItemPreview({ item, size = 'table' }) {
   const imageClassName = size === 'card' ? 'h-20 w-20' : 'h-14 w-14';
 
-  if (item.primary_photo) {
-    return (
-      <img
-        src={item.primary_photo}
-        alt={item.title}
-        className={`${imageClassName} flex-none rounded-2xl object-cover`}
-      />
-    );
-  }
-
   return (
-    <div className={`flex ${imageClassName} flex-none items-center justify-center rounded-2xl border border-dashed border-slate-700 text-xs text-slate-500`}>
-      Нет фото
-    </div>
+    <ItemImage
+      src={item.primary_photo}
+      alt={item.title}
+      className={`${imageClassName} flex-none rounded-2xl object-cover`}
+    />
   );
 }
 
 function ItemMobileCard({ item, deletingItemId, onDelete, canManage }) {
   const publicationState = getPublicationState(item);
+  const hasRealizedProfit = [SOLD_STATUS, LOST_STATUS].includes(item.status);
 
   return (
     <article className="rounded-2xl border border-slate-800/90 bg-slate-900/60 p-4 shadow-panel backdrop-blur-xl transition hover:border-slate-700/90">
@@ -78,7 +77,7 @@ function ItemMobileCard({ item, deletingItemId, onDelete, canManage }) {
         </div>
         <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
           <p className="text-xs text-slate-500">Продажа</p>
-          <p className="mt-1 font-medium tabular-nums text-slate-100">{formatCurrency(item.actual_sale_price || item.planned_sale_price)}</p>
+          <p className="mt-1 font-medium tabular-nums text-slate-100">{formatSalePrice(item)}</p>
         </div>
         <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
           <p className="text-xs text-slate-500">Расходы</p>
@@ -86,22 +85,31 @@ function ItemMobileCard({ item, deletingItemId, onDelete, canManage }) {
         </div>
         <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
           <p className="text-xs text-slate-500">Прибыль</p>
-          <p className={`mt-1 font-semibold tabular-nums ${item.profit >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
-            {formatCurrency(item.profit)}
+          <p className={`mt-1 font-semibold tabular-nums ${
+            hasRealizedProfit
+              ? item.profit >= 0 ? 'text-emerald-300' : 'text-rose-300'
+              : 'text-slate-400'
+          }`}>
+            {hasRealizedProfit ? formatCurrency(item.profit) : '—'}
           </p>
         </div>
       </div>
 
       {canManage ? (
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <Link to={`/items/${item.id}/edit`} className="button-secondary px-3 py-2 text-xs">
+          <Link
+            to={`/items/${item.id}/edit`}
+            className="button-secondary px-3 py-2 text-xs"
+            aria-label={`Редактировать ${item.title}`}
+          >
             Редактировать
           </Link>
           <button
             type="button"
             className="button-secondary border-rose-500/30 px-3 py-2 text-xs text-rose-300 hover:border-rose-400/40 hover:bg-rose-500/10"
             onClick={() => onDelete(item)}
-            disabled={deletingItemId === item.id}
+            disabled={Boolean(deletingItemId)}
+            aria-label={`Удалить ${item.title}`}
           >
             {deletingItemId === item.id ? 'Удаление...' : 'Удалить'}
           </button>
@@ -171,10 +179,14 @@ export function ItemTable({ items, deletingItemId = null, onDelete, canManage = 
                     ) : null}
                   </td>
                   <td className="whitespace-nowrap px-3 py-3 tabular-nums text-slate-200">{formatCurrency(item.purchase_price)}</td>
-                  <td className="whitespace-nowrap px-3 py-3 tabular-nums text-slate-200">{formatCurrency(item.actual_sale_price || item.planned_sale_price)}</td>
+                  <td className="whitespace-nowrap px-3 py-3 tabular-nums text-slate-200">{formatSalePrice(item)}</td>
                   <td className="whitespace-nowrap px-3 py-3 tabular-nums text-slate-200">{formatCurrency(item.total_expenses)}</td>
-                  <td className={`whitespace-nowrap px-3 py-3 font-semibold tabular-nums ${item.profit >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
-                    {formatCurrency(item.profit)}
+                  <td className={`whitespace-nowrap px-3 py-3 font-semibold tabular-nums ${
+                    [SOLD_STATUS, LOST_STATUS].includes(item.status)
+                      ? item.profit >= 0 ? 'text-emerald-300' : 'text-rose-300'
+                      : 'text-slate-400'
+                  }`}>
+                    {[SOLD_STATUS, LOST_STATUS].includes(item.status) ? formatCurrency(item.profit) : '—'}
                   </td>
                   <td className="whitespace-nowrap px-3 py-3">
                     <StatusBadge status={item.status} />
@@ -194,7 +206,7 @@ export function ItemTable({ items, deletingItemId = null, onDelete, canManage = 
                           type="button"
                           className="inline-flex h-10 w-10 flex-none items-center justify-center rounded-xl border border-rose-500/30 bg-slate-900 text-rose-300 transition hover:border-rose-400/40 hover:bg-rose-500/10 disabled:cursor-not-allowed disabled:opacity-60"
                           onClick={() => onDelete(item)}
-                          disabled={deletingItemId === item.id}
+                          disabled={Boolean(deletingItemId)}
                           title="Удалить"
                           aria-label={`Удалить ${item.title}`}
                         >

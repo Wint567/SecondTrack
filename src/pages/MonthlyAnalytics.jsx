@@ -3,26 +3,21 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { EmptyState } from '../components/Feedback/EmptyState';
 import { ErrorState } from '../components/Feedback/ErrorState';
 import { LoadingState } from '../components/Feedback/LoadingState';
+import { RefetchWarning } from '../components/Feedback/RefetchWarning';
 import { PageHeader } from '../components/UI/PageHeader';
 import { StatCard } from '../components/UI/StatCard';
+import { ItemImage } from '../components/UI/ItemImage';
+import { useAuth } from '../auth/useAuth';
 import { useDashboardMetrics } from '../hooks/useDashboardMetrics';
 import { formatCurrency, formatDate } from '../utils/formatters';
 
 function ItemPhoto({ item }) {
-  if (item.primary_photo) {
-    return (
-      <img
-        src={item.primary_photo}
-        alt={item.title}
-        className="h-16 w-16 flex-none rounded-2xl object-cover"
-      />
-    );
-  }
-
   return (
-    <div className="flex h-16 w-16 flex-none items-center justify-center rounded-2xl border border-dashed border-slate-700 text-xs text-slate-500">
-      Нет фото
-    </div>
+    <ItemImage
+      src={item.primary_photo}
+      alt={item.title}
+      className="h-16 w-16 flex-none rounded-2xl object-cover"
+    />
   );
 }
 
@@ -97,6 +92,7 @@ function SoldItemCard({ item }) {
 }
 
 export function MonthlyAnalytics() {
+  const { isAuthenticated } = useAuth();
   const metrics = useDashboardMetrics();
   const [selectedIndex, setSelectedIndex] = useState(0);
 
@@ -111,24 +107,34 @@ export function MonthlyAnalytics() {
   }
 
   if (metrics.isError) {
-    return <ErrorState description={metrics.error?.message || 'Не удалось загрузить месячную аналитику.'} />;
+    return <ErrorState description={metrics.error?.message || 'Не удалось загрузить месячную аналитику.'} onRetry={metrics.refetch} />;
   }
 
   if (!metrics.monthlyStats.length) {
     return (
-      <EmptyState
-        title="Месячной аналитики пока нет"
-        description="Добавьте первую вещь, чтобы увидеть покупки, продажи и прибыль по месяцам."
-      />
+      <div className="space-y-4">
+        {metrics.isRefetchError ? <RefetchWarning onRetry={metrics.refetch} /> : null}
+        <EmptyState
+          title="Месячной аналитики пока нет"
+          description={
+            isAuthenticated
+              ? 'Добавьте первую вещь или расход, чтобы увидеть движение денег по месяцам.'
+              : 'Когда администратор добавит покупки, продажи или расходы, здесь появится движение денег по месяцам.'
+          }
+        />
+      </div>
     );
   }
 
-  const selectedMonth = metrics.monthlyStats[selectedIndex];
-  const canGoBack = selectedIndex > 0;
-  const canGoForward = selectedIndex < metrics.monthlyStats.length - 1;
+  const safeSelectedIndex = Math.min(selectedIndex, metrics.monthlyStats.length - 1);
+  const selectedMonth = metrics.monthlyStats[safeSelectedIndex];
+  const canGoBack = safeSelectedIndex > 0;
+  const canGoForward = safeSelectedIndex < metrics.monthlyStats.length - 1;
 
   return (
     <div className="space-y-6">
+      {metrics.isRefetchError ? <RefetchWarning onRetry={metrics.refetch} /> : null}
+
       <PageHeader
         eyebrow="Месяцы"
         title="Ежемесячная аналитика"
@@ -140,7 +146,7 @@ export function MonthlyAnalytics() {
           <button
             type="button"
             className="button-secondary w-full gap-2 sm:w-auto"
-            onClick={() => setSelectedIndex((current) => Math.max(current - 1, 0))}
+            onClick={() => setSelectedIndex(Math.max(safeSelectedIndex - 1, 0))}
             disabled={!canGoBack}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -155,7 +161,7 @@ export function MonthlyAnalytics() {
           <button
             type="button"
             className="button-secondary w-full gap-2 sm:w-auto"
-            onClick={() => setSelectedIndex((current) => Math.min(current + 1, metrics.monthlyStats.length - 1))}
+            onClick={() => setSelectedIndex(Math.min(safeSelectedIndex + 1, metrics.monthlyStats.length - 1))}
             disabled={!canGoForward}
           >
             Следующий

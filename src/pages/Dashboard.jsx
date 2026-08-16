@@ -3,7 +3,9 @@ import { ChartCard } from '../components/Charts/ChartCard';
 import { LineTrendChart } from '../components/Charts/LineTrendChart';
 import { StatusPieChart } from '../components/Charts/StatusPieChart';
 import { ErrorState } from '../components/Feedback/ErrorState';
+import { EmptyState } from '../components/Feedback/EmptyState';
 import { LoadingState } from '../components/Feedback/LoadingState';
+import { RefetchWarning } from '../components/Feedback/RefetchWarning';
 import { PageHeader } from '../components/UI/PageHeader';
 import { StatCard } from '../components/UI/StatCard';
 import { useDashboardMetrics } from '../hooks/useDashboardMetrics';
@@ -19,11 +21,18 @@ export function Dashboard() {
   }
 
   if (metrics.isError) {
-    return <ErrorState description={metrics.error?.message || 'Не удалось загрузить метрики дашборда.'} />;
+    return (
+      <ErrorState
+        description={metrics.error?.message || 'Не удалось загрузить метрики дашборда.'}
+        onRetry={metrics.refetch}
+      />
+    );
   }
 
   return (
     <div className="space-y-6">
+      {metrics.isRefetchError ? <RefetchWarning onRetry={metrics.refetch} /> : null}
+
       <PageHeader
         eyebrow="Обзор"
         title="Ключевые показатели по товарам"
@@ -54,18 +63,19 @@ export function Dashboard() {
         <StatCard label="ROI cashflow" value={`${metrics.roi.toFixed(1)}%`} subtext={`Всего товаров: ${metrics.itemsCount}`} tone={metrics.roi >= 0 ? 'positive' : 'negative'} />
       </section>
 
-      <section className="grid gap-5">
+      {metrics.monthlyStats.length ? (
+        <section className="grid gap-5">
         <ChartCard title="Закупки по месяцам">
-          <LineTrendChart data={metrics.monthlyStats} dataKey="purchaseAmount" stroke="#c9a94f" />
+          <LineTrendChart data={metrics.monthlyStats} dataKey="purchaseAmount" name="Закупки" stroke="#c9a94f" />
         </ChartCard>
         <ChartCard title="Ежемесячный доход">
-          <LineTrendChart data={metrics.monthlyStats} dataKey="salesAmount" stroke="#34d97a" />
+          <LineTrendChart data={metrics.monthlyStats} dataKey="salesAmount" name="Продажи" stroke="#34d97a" />
         </ChartCard>
         <ChartCard title="Cashflow по месяцам">
-          <LineTrendChart data={metrics.monthlyStats} dataKey="cashflow" stroke="#18b862" />
+          <LineTrendChart data={metrics.monthlyStats} dataKey="cashflow" name="Cashflow" stroke="#18b862" />
         </ChartCard>
         <ChartCard title="Прибыль по проданным товарам">
-          <LineTrendChart data={metrics.monthlyStats} dataKey="soldProfit" stroke="#34d97a" />
+          <LineTrendChart data={metrics.monthlyStats} dataKey="soldProfit" name="Прибыль" stroke="#34d97a" />
         </ChartCard>
         <ChartCard title="Товары по месяцам">
           <LineTrendChart
@@ -81,7 +91,15 @@ export function Dashboard() {
         <ChartCard title="Товары по статусам">
           <StatusPieChart data={metrics.statusChart} />
         </ChartCard>
-      </section>
+        </section>
+      ) : (
+        <EmptyState
+          title="Данных для графиков пока нет"
+          description={isAuthenticated
+            ? 'Добавьте первую вещь или расход, чтобы увидеть динамику по месяцам.'
+            : 'Когда в демо появятся операции, здесь отобразится динамика по месяцам.'}
+        />
+      )}
     </div>
   );
 }

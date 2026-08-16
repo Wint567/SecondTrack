@@ -29,6 +29,10 @@ async function createExpense(payload) {
     throw new Error('Сумма расхода должна быть больше нуля.');
   }
 
+  if (!payload.expense_date) {
+    throw new Error('Укажите дату расхода.');
+  }
+
   const { data, error } = await supabase
     .from('expenses')
     .insert({
@@ -36,7 +40,7 @@ async function createExpense(payload) {
       amount: normalizedAmount,
       expense_date: payload.expense_date,
       note: payload.note?.trim() || '',
-      item_id: payload.item_id === null ? null : payload.item_id,
+      item_id: payload.item_id || null,
     })
     .select()
     .single();
@@ -60,9 +64,10 @@ export function useCreateExpense() {
 
   return useMutation({
     mutationFn: createExpense,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['expenses'] });
-      queryClient.invalidateQueries({ queryKey: ['items'] });
-    },
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['expenses'], refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: ['items'], refetchType: 'all' }),
+      ]),
   });
 }

@@ -1,24 +1,28 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { EmptyState } from '../components/Feedback/EmptyState';
 import { ErrorState } from '../components/Feedback/ErrorState';
 import { LoadingState } from '../components/Feedback/LoadingState';
+import { RefetchWarning } from '../components/Feedback/RefetchWarning';
 import { Field } from '../components/Forms/Field';
 import { PageHeader } from '../components/UI/PageHeader';
 import { DataTableShell } from '../components/UI/DataTableShell';
 import { useCreateExpense, useExpenses } from '../hooks/useExpenses';
 import { useItems } from '../hooks/useItems';
 import { EXPENSE_TYPES } from '../utils/constants';
-import { formatCurrency, formatDate } from '../utils/formatters';
+import { formatCurrency, formatDate, getDateInputValue } from '../utils/formatters';
 import { useAuth } from '../auth/useAuth';
 import { ReadOnlyNotice } from '../components/Auth/ReadOnlyNotice';
+import { ToastMessage } from '../components/UI/ToastMessage';
 
-const initialForm = {
-  item_id: null,
-  type: 'Доставка',
-  amount: '',
-  expense_date: new Date().toISOString().slice(0, 10),
-  note: '',
-};
+function createInitialForm() {
+  return {
+    item_id: null,
+    type: 'Доставка',
+    amount: '',
+    expense_date: getDateInputValue(),
+    note: '',
+  };
+}
 
 function ExpenseCard({ expense }) {
   return (
@@ -50,16 +54,24 @@ function ExpenseCard({ expense }) {
 export function Expenses() {
   const { isAuthenticated } = useAuth();
   const expensesQuery = useExpenses();
-  const itemsQuery = useItems();
+  const itemsQuery = useItems({ enabled: isAuthenticated });
   const createExpense = useCreateExpense();
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState(createInitialForm);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const submissionLockRef = useRef(false);
 
   const items = useMemo(() => itemsQuery.data ?? [], [itemsQuery.data]);
 
   async function handleSubmit(event) {
     event.preventDefault();
+
+    if (submissionLockRef.current || createExpense.isPending) {
+      return;
+    }
+
     setError('');
+    setSuccessMessage('');
 
     if (!isAuthenticated) {
       setError('Войдите как администратор, чтобы добавлять расходы.');
@@ -76,28 +88,55 @@ export function Expenses() {
       return;
     }
 
+    if (!form.expense_date) {
+      setError('Укажите дату расхода.');
+      return;
+    }
+
+    submissionLockRef.current = true;
+
     try {
       await createExpense.mutateAsync({
         ...form,
         amount: Number(form.amount),
         item_id: form.item_id ?? null,
       });
-      setForm(initialForm);
+      setForm(createInitialForm());
+      setSuccessMessage('Расход сохранён.');
     } catch (submissionError) {
       setError(submissionError.message || 'Не удалось сохранить расход.');
+    } finally {
+      submissionLockRef.current = false;
     }
   }
 
-  if (expensesQuery.isLoading || itemsQuery.isLoading) {
+  if (expensesQuery.isLoading || (isAuthenticated && itemsQuery.isLoading)) {
     return <LoadingState label="Загрузка расходов..." />;
   }
 
-  if (expensesQuery.isError || itemsQuery.isError) {
-    return <ErrorState description={expensesQuery.error?.message || itemsQuery.error?.message || 'Не удалось загрузить расходы.'} />;
+  if (
+    (expensesQuery.isError && expensesQuery.data === undefined)
+    || (isAuthenticated && itemsQuery.isError && itemsQuery.data === undefined)
+  ) {
+    return (
+      <ErrorState
+        description={expensesQuery.error?.message || itemsQuery.error?.message || 'Не удалось загрузить расходы.'}
+        onRetry={() => Promise.all([expensesQuery.refetch(), itemsQuery.refetch()])}
+      />
+    );
   }
 
   return (
     <div className="space-y-6">
+      {(expensesQuery.isError && expensesQuery.data !== undefined)
+      || (isAuthenticated && itemsQuery.isError && itemsQuery.data !== undefined) ? (
+        <RefetchWarning
+          onRetry={() => isAuthenticated
+            ? Promise.all([expensesQuery.refetch(), itemsQuery.refetch()])
+            : expensesQuery.refetch()}
+        />
+      ) : null}
+
       <PageHeader
         eyebrow="Расходы"
         title="Учитывайте все издержки"
@@ -125,7 +164,7 @@ export function Expenses() {
             </select>
           </Field>
 
-          <Field label="Сумма" htmlFor="expense-amount" error={error}>
+          <Field label="Сумма" htmlFor="expense-amount">
             <input
               id="expense-amount"
               className="input"
@@ -180,7 +219,18 @@ export function Expenses() {
             />
           </Field>
 
-          <button type="submit" className="button-primary w-full" disabled={createExpense.isPending}>
+          {error ? (
+            <div role="alert" className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+              {error}
+            </div>
+          ) : null}
+
+          <button
+            type="submit"
+            className="button-primary w-full"
+            disabled={createExpense.isPending}
+            aria-busy={createExpense.isPending}
+          >
             {createExpense.isPending ? 'Сохранение...' : 'Сохранить расход'}
           </button>
           </form>
@@ -232,6 +282,11 @@ export function Expenses() {
           )}
         </DataTableShell>
       </div>
+
+      <ToastMessage
+        message={successMessage}
+        onClose={() => setSuccessMessage('')}
+      />
     </div>
   );
 }

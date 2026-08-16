@@ -1,9 +1,17 @@
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import { formatStatusLabel } from '../../utils/formatters';
 
 const COLORS = ['#34d97a', '#3b82f6', '#8b5cf6', '#c9a94f', '#b87469', '#64748b'];
 
 export function StatusPieChart({ data }) {
+  if (!data?.length) {
+    return (
+      <div role="status" className="flex h-full items-center justify-center text-sm text-slate-500">
+        Нет данных по статусам
+      </div>
+    );
+  }
+
   return (
     <ResponsiveContainer width="100%" height="100%">
       <PieChart>
@@ -17,6 +25,10 @@ export function StatusPieChart({ data }) {
           contentStyle={{ backgroundColor: '#0b1118', border: '1px solid #1f2937', borderRadius: 16, color: '#ffffff' }}
           labelStyle={{ color: '#ffffff' }}
           itemStyle={{ color: '#ffffff' }}
+        />
+        <Legend
+          formatter={(value) => formatStatusLabel(value)}
+          wrapperStyle={{ color: '#cbd5e1', fontSize: 12 }}
         />
       </PieChart>
     </ResponsiveContainer>

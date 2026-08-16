@@ -21,12 +21,32 @@ function getSelectedPrimaryPhotoId(payload, uploadedPhotos) {
   return payload.primary_photo_id ?? uploadedPhotos[0]?.id ?? null;
 }
 
-function createDraftError(itemId, savedLabel = 'Товар сохранён') {
+function createDraftError(itemId, savedLabel = 'Товар сохранён', cause) {
+  const photosNeedReview = Boolean(cause?.uploadCleanupIncomplete || cause?.photosUploaded);
+  const retryMessage = photosNeedReview
+    ? 'Файлы уже могли сохраниться: проверьте список фотографий перед повторной загрузкой.'
+    : 'Откройте товар и повторите сохранение.';
   const error = new Error(
-    `${savedLabel} как непубличный черновик, но завершить работу с фотографиями и публикацией не удалось. Откройте товар и повторите сохранение.`,
+    `${savedLabel} как непубличный черновик, но завершить работу с фотографиями и публикацией не удалось. ${retryMessage}`,
+    { cause },
   );
   error.draftItemId = itemId;
+  error.photosNeedReview = photosNeedReview;
   return error;
+}
+
+function markPhotosUploaded(error) {
+  const wrappedError = new Error('Фотографии загружены, но обновить публикацию не удалось.', { cause: error });
+  wrappedError.photosUploaded = true;
+  return wrappedError;
+}
+
+function refreshQueries(queryClient, queryKeys) {
+  return Promise.all(
+    queryKeys.map((queryKey) =>
+      queryClient.invalidateQueries({ queryKey, refetchType: 'all' }),
+    ),
+  );
 }
 
 async function createItemWithPhotos(payload) {
@@ -40,17 +60,28 @@ async function createItemWithPhotos(payload) {
     primary_photo_id: null,
   });
 
-  try {
-    const uploadedPhotos = await uploadItemPhotos({ itemId: item.id, photos });
-    const primaryPhotoId = getSelectedPrimaryPhotoId(payload, uploadedPhotos);
+  if (!photos.length) {
+    return item;
+  }
 
+  let uploadedPhotos;
+
+  try {
+    uploadedPhotos = await uploadItemPhotos({ itemId: item.id, photos });
+  } catch (uploadError) {
+    throw createDraftError(item.id, 'Товар сохранён', uploadError);
+  }
+
+  const primaryPhotoId = getSelectedPrimaryPhotoId(payload, uploadedPhotos);
+
+  try {
     return await updateItemStoreState({
       id: item.id,
       isPublic: requestedIsPublic,
       primaryPhotoId,
     });
-  } catch {
-    throw createDraftError(item.id);
+  } catch (publicationError) {
+    throw createDraftError(item.id, 'Товар сохранён', markPhotosUploaded(publicationError));
   }
 }
 
@@ -60,22 +91,34 @@ async function updateItemWithPhotos(payload) {
   assertValidItem(payload, photoCount);
 
   const requestedIsPublic = Boolean(payload.is_public);
+
+  if (!photos.length) {
+    return updateItem(payload);
+  }
+
   await updateItem({
     ...payload,
     is_public: false,
   });
 
-  try {
-    const uploadedPhotos = await uploadItemPhotos({ itemId: payload.id, photos });
-    const primaryPhotoId = getSelectedPrimaryPhotoId(payload, uploadedPhotos);
+  let uploadedPhotos;
 
+  try {
+    uploadedPhotos = await uploadItemPhotos({ itemId: payload.id, photos });
+  } catch (uploadError) {
+    throw createDraftError(payload.id, 'Изменения сохранены', uploadError);
+  }
+
+  const primaryPhotoId = getSelectedPrimaryPhotoId(payload, uploadedPhotos);
+
+  try {
     return await updateItemStoreState({
       id: payload.id,
       isPublic: requestedIsPublic,
       primaryPhotoId,
     });
-  } catch {
-    throw createDraftError(payload.id, 'Изменения сохранены');
+  } catch (publicationError) {
+    throw createDraftError(payload.id, 'Изменения сохранены', markPhotosUploaded(publicationError));
   }
 }
 
@@ -83,37 +126,73 @@ async function deletePhotoWithFallback({ item, photo }) {
   const remainingPhotos = (item.item_photos ?? []).filter((candidate) => candidate.id !== photo.id);
   const deletesPrimaryPhoto = item.primary_photo_id === photo.id;
   const removesLastPhoto = remainingPhotos.length === 0;
+  const needsStoreStateUpdate = deletesPrimaryPhoto || (item.is_public && removesLastPhoto);
 
-  if (deletesPrimaryPhoto || (item.is_public && removesLastPhoto)) {
-    await updateItemStoreState({
-      id: item.id,
-      isPublic: false,
-      primaryPhotoId: deletesPrimaryPhoto ? null : item.primary_photo_id,
-    });
-  }
-
-  await deletePhoto(photo);
-
-  if (deletesPrimaryPhoto) {
+  if (needsStoreStateUpdate) {
     await updateItemStoreState({
       id: item.id,
       isPublic: Boolean(item.is_public && remainingPhotos.length),
-      primaryPhotoId: remainingPhotos[0]?.id ?? null,
+      primaryPhotoId: deletesPrimaryPhoto ? remainingPhotos[0]?.id ?? null : item.primary_photo_id,
     });
+  }
+
+  let storageCleanupError;
+
+  try {
+    storageCleanupError = await deletePhoto(photo);
+  } catch (deletionError) {
+    if (needsStoreStateUpdate) {
+      try {
+        await updateItemStoreState({
+          id: item.id,
+          isPublic: item.is_public,
+          primaryPhotoId: item.primary_photo_id,
+        });
+      } catch {
+        throw new Error(
+          'Фото не удалено, а исходное состояние публикации восстановить не удалось. Обновите страницу и проверьте товар.',
+          { cause: deletionError },
+        );
+      }
+    }
+
+    throw deletionError;
+  }
+
+  if (storageCleanupError) {
+    const error = new Error(
+      'Фото удалено из товара, но очистить файл в хранилище не удалось.',
+      { cause: storageCleanupError },
+    );
+    error.photoDeleted = true;
+    throw error;
   }
 
   return photo;
 }
 
 async function deleteItemWithPhotos(item) {
-  await deleteItemPhotos(item);
   await deleteItemRecord(item);
+
+  try {
+    await deleteItemPhotos(item);
+  } catch (storageCleanupError) {
+    const error = new Error(
+      'Товар удалён, но очистить его файлы в хранилище не удалось.',
+      { cause: storageCleanupError },
+    );
+    error.itemDeleted = true;
+    throw error;
+  }
+
+  return item;
 }
 
-export function useItems() {
+export function useItems({ enabled = true } = {}) {
   return useQuery({
     queryKey: ['items'],
     queryFn: fetchItems,
+    enabled,
   });
 }
 
@@ -130,10 +209,7 @@ export function useCreateItem() {
 
   return useMutation({
     mutationFn: createItemWithPhotos,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['items'] });
-      queryClient.invalidateQueries({ queryKey: ['expenses'] });
-    },
+    onSettled: () => refreshQueries(queryClient, [['items']]),
   });
 }
 
@@ -142,11 +218,12 @@ export function useUpdateItem() {
 
   return useMutation({
     mutationFn: updateItemWithPhotos,
-    onSettled: (_, __, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['items'] });
-      queryClient.invalidateQueries({ queryKey: ['item', variables.id] });
-      queryClient.invalidateQueries({ queryKey: ['expenses'] });
-    },
+    onSettled: (_, __, variables) =>
+      refreshQueries(queryClient, [
+        ['items'],
+        ['item', variables.id],
+        ['expenses'],
+      ]),
   });
 }
 
@@ -155,9 +232,12 @@ export function useDeleteItem() {
 
   return useMutation({
     mutationFn: deleteItemWithPhotos,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['items'] });
-      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+    onSettled: (deletedItem, error, item) => {
+      if (deletedItem || error?.itemDeleted) {
+        queryClient.removeQueries({ queryKey: ['item', item.id], exact: true });
+      }
+
+      return refreshQueries(queryClient, [['items'], ['expenses']]);
     },
   });
 }
@@ -167,9 +247,10 @@ export function useDeletePhoto() {
 
   return useMutation({
     mutationFn: deletePhotoWithFallback,
-    onSettled: (_, __, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['items'] });
-      queryClient.invalidateQueries({ queryKey: ['item', variables.item.id] });
-    },
+    onSettled: (_, __, variables) =>
+      refreshQueries(queryClient, [
+        ['items'],
+        ['item', variables.item.id],
+      ]),
   });
 }

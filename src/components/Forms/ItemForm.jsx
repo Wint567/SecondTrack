@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Star } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Field } from './Field';
 import { ImageUploader } from './ImageUploader';
+import { ConfirmDialog } from '../UI/ConfirmDialog';
+import { ItemImage } from '../UI/ItemImage';
 import {
   BOUGHT_STATUS,
   CONDITION_OPTIONS,
@@ -11,28 +14,40 @@ import {
   SOLD_STATUS,
 } from '../../utils/constants';
 import { getItemValidationError } from '../../utils/itemValidation';
+import { getDateInputValue } from '../../utils/formatters';
 
-export const itemInitialForm = {
-  title: '',
-  brand: '',
-  category: 'Футболки',
-  size: '',
-  condition: 'Очень хорошее',
-  public_description: '',
-  is_public: false,
-  slug: '',
-  vinted_url: '',
-  primary_photo_id: null,
-  primary_photo_file_index: null,
-  purchase_date: new Date().toISOString().slice(0, 10),
-  purchase_price: '',
-  planned_sale_price: '',
-  actual_sale_price: '',
-  sold_at: '',
-  status: BOUGHT_STATUS,
-  source_place: '',
-  notes: '',
-};
+const MAX_PHOTO_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_PHOTO_COUNT = 20;
+const SUPPORTED_PHOTO_TYPES = new Set([
+  'image/avif',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+]);
+
+export function createItemInitialForm() {
+  return {
+    title: '',
+    brand: '',
+    category: 'Футболки',
+    size: '',
+    condition: 'Очень хорошее',
+    public_description: '',
+    is_public: false,
+    slug: '',
+    vinted_url: '',
+    primary_photo_id: null,
+    primary_photo_file_index: null,
+    purchase_date: getDateInputValue(),
+    purchase_price: '',
+    planned_sale_price: '',
+    actual_sale_price: '',
+    sold_at: '',
+    status: BOUGHT_STATUS,
+    source_place: '',
+    notes: '',
+  };
+}
 
 function includeCurrentOption(options, currentValue) {
   if (!currentValue || options.includes(currentValue)) {
@@ -67,7 +82,7 @@ export function buildItemFormState(item) {
     vinted_url: item?.vinted_url ?? '',
     primary_photo_id: item?.primary_photo_id ?? item?.item_photos?.[0]?.id ?? null,
     primary_photo_file_index: null,
-    purchase_date: item?.purchase_date ?? new Date().toISOString().slice(0, 10),
+    purchase_date: item?.purchase_date ?? getDateInputValue(),
     purchase_price: item?.purchase_price ?? '',
     planned_sale_price: item?.planned_sale_price ?? '',
     actual_sale_price: item?.actual_sale_price ?? '',
@@ -89,7 +104,7 @@ function SectionHeading({ title, description }) {
 
 export function ItemForm({
   mode = 'create',
-  initialValues = itemInitialForm,
+  initialValues = createItemInitialForm(),
   existingPhotos = [],
   submitLabel,
   submitPendingLabel,
@@ -103,6 +118,11 @@ export function ItemForm({
   const [form, setForm] = useState(initialValues);
   const [photos, setPhotos] = useState([]);
   const [localError, setLocalError] = useState('');
+  const [photoToDelete, setPhotoToDelete] = useState(null);
+  const [photoDeleteError, setPhotoDeleteError] = useState('');
+  const [photoInputVersion, setPhotoInputVersion] = useState(0);
+  const submitLockRef = useRef(false);
+  const photoDeleteLockRef = useRef(false);
 
   const previews = useMemo(() => photos.map((file) => URL.createObjectURL(file)), [photos]);
   const categoryOptions = useMemo(
@@ -118,6 +138,7 @@ export function ItemForm({
     [form.status],
   );
   const publicationDescription = getPublicationDescription(form.is_public, form.status);
+  const isBusy = isSubmitting || Boolean(deletingPhotoId);
 
   useEffect(() => {
     return () => {
@@ -127,19 +148,37 @@ export function ItemForm({
 
   useEffect(() => {
     setForm((current) => {
+      const primaryPhotoStillExists = Boolean(current.primary_photo_id)
+        && existingPhotos.some((photo) => photo.id === current.primary_photo_id);
+      const nextPrimaryPhotoId = primaryPhotoStillExists
+        ? current.primary_photo_id
+        : existingPhotos[0]?.id ?? null;
+      const nextIsPublic = existingPhotos.length || photos.length ? current.is_public : false;
+
       if (
-        !current.primary_photo_id
-        || existingPhotos.some((photo) => photo.id === current.primary_photo_id)
+        nextPrimaryPhotoId === current.primary_photo_id
+        && nextIsPublic === current.is_public
       ) {
         return current;
       }
 
       return {
         ...current,
-        primary_photo_id: existingPhotos[0]?.id ?? null,
+        primary_photo_id: nextPrimaryPhotoId,
+        is_public: nextIsPublic,
       };
     });
-  }, [existingPhotos]);
+  }, [existingPhotos, photos.length]);
+
+  useEffect(() => {
+    if (
+      photoToDelete
+      && !existingPhotos.some((photo) => photo.id === photoToDelete.id)
+    ) {
+      setPhotoToDelete(null);
+      setPhotoDeleteError('');
+    }
+  }, [existingPhotos, photoToDelete]);
 
   function updateField(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -147,6 +186,30 @@ export function ItemForm({
 
   function handlePhotosChange(event) {
     const selectedPhotos = Array.from(event.target.files ?? []);
+
+    if (existingPhotos.length + selectedPhotos.length > MAX_PHOTO_COUNT) {
+      setLocalError(`Для одного товара можно сохранить не больше ${MAX_PHOTO_COUNT} фотографий.`);
+      event.target.value = '';
+      return;
+    }
+
+    const invalidPhoto = selectedPhotos.find((file) => !SUPPORTED_PHOTO_TYPES.has(file.type));
+
+    if (invalidPhoto) {
+      setLocalError(`Файл «${invalidPhoto.name}» имеет неподдерживаемый тип. Используйте JPEG, PNG, WebP или AVIF.`);
+      event.target.value = '';
+      return;
+    }
+
+    const oversizedPhoto = selectedPhotos.find((file) => file.size > MAX_PHOTO_SIZE_BYTES);
+
+    if (oversizedPhoto) {
+      setLocalError(`Файл «${oversizedPhoto.name}» больше 10 МБ.`);
+      event.target.value = '';
+      return;
+    }
+
+    setLocalError('');
     setPhotos(selectedPhotos);
     setForm((current) => {
       const selectedIndex = Number.isInteger(current.primary_photo_file_index)
@@ -164,6 +227,11 @@ export function ItemForm({
 
   async function handleSubmit(event) {
     event.preventDefault();
+
+    if (submitLockRef.current || isBusy) {
+      return;
+    }
+
     setLocalError('');
 
     const validationError = getItemValidationError(
@@ -176,18 +244,54 @@ export function ItemForm({
       return;
     }
 
-    await onSubmit({
-      ...form,
-      photos,
-      existing_photo_count: existingPhotos.length,
-    });
+    submitLockRef.current = true;
+
+    try {
+      const result = await onSubmit({
+        ...form,
+        photos,
+        existing_photo_count: existingPhotos.length,
+      });
+
+      if (result?.resetSelectedPhotos) {
+        setPhotos([]);
+        setPhotoInputVersion((current) => current + 1);
+        setForm((current) => ({ ...current, primary_photo_file_index: null }));
+      }
+    } finally {
+      submitLockRef.current = false;
+    }
+  }
+
+  async function handleConfirmPhotoDelete() {
+    if (!photoToDelete || deletingPhotoId || photoDeleteLockRef.current) {
+      return;
+    }
+
+    photoDeleteLockRef.current = true;
+
+    try {
+      const result = await onDeletePhoto?.(photoToDelete);
+
+      if (result?.success === false) {
+        setPhotoDeleteError(result.message || 'Не удалось удалить фотографию.');
+        return;
+      }
+
+      setPhotoToDelete(null);
+      setPhotoDeleteError('');
+    } finally {
+      photoDeleteLockRef.current = false;
+    }
   }
 
   const displayError = error || localError;
 
   return (
     <form onSubmit={handleSubmit} className="grid items-start gap-6 xl:grid-cols-[1.2fr,0.8fr]">
-      <div className="space-y-6">
+      <fieldset disabled={isBusy} className="contents">
+        <legend className="sr-only">Данные товара</legend>
+        <div className="space-y-6">
         <section className="card space-y-5">
           <SectionHeading
             title="Информация для магазина"
@@ -423,18 +527,38 @@ export function ItemForm({
           ) : null}
 
           {displayError ? (
-            <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+            <div role="alert" className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
               {displayError}
             </div>
           ) : null}
 
-          <button type="submit" className="button-primary w-full sm:w-auto" disabled={isSubmitting}>
-            {isSubmitting ? submitPendingLabel : submitLabel}
-          </button>
+          <div className="flex flex-col-reverse gap-3 sm:flex-row">
+            <Link
+              to="/items"
+              className={`button-secondary w-full sm:w-auto ${isBusy ? 'pointer-events-none opacity-60' : ''}`}
+              aria-disabled={isBusy}
+              tabIndex={isBusy ? -1 : undefined}
+              onClick={(event) => {
+                if (isBusy) {
+                  event.preventDefault();
+                }
+              }}
+            >
+              Отмена
+            </Link>
+            <button
+              type="submit"
+              className="button-primary w-full sm:w-auto"
+              disabled={isBusy}
+              aria-busy={isSubmitting}
+            >
+              {isSubmitting ? submitPendingLabel : submitLabel}
+            </button>
+          </div>
         </section>
-      </div>
+        </div>
 
-      <section className="card space-y-5 xl:sticky xl:top-24">
+        <section className="card space-y-5 xl:sticky xl:top-24">
         <SectionHeading
           title="Фотографии"
           description={
@@ -446,7 +570,7 @@ export function ItemForm({
 
         {existingPhotos.length ? (
           <div className="grid gap-3 sm:grid-cols-2">
-            {existingPhotos.map((photo) => {
+            {existingPhotos.map((photo, index) => {
               const isPrimary = form.primary_photo_file_index === null
                 && form.primary_photo_id === photo.id;
 
@@ -457,9 +581,9 @@ export function ItemForm({
                       Главное фото
                     </span>
                   ) : null}
-                  <img
+                  <ItemImage
                     src={photo.image_url}
-                    alt="Фото вещи"
+                    alt={`Фото вещи ${index + 1}`}
                     className="h-44 w-full rounded-lg object-cover"
                   />
                   <div className="mt-3 grid grid-cols-2 gap-2">
@@ -467,6 +591,8 @@ export function ItemForm({
                       type="button"
                       className="button-secondary gap-2 px-3 py-2 text-xs"
                       aria-pressed={isPrimary}
+                      aria-label={`Сделать фото ${index + 1} главным`}
+                      disabled={isBusy}
                       onClick={() => {
                         updateField('primary_photo_id', photo.id);
                         updateField('primary_photo_file_index', null);
@@ -477,9 +603,13 @@ export function ItemForm({
                     </button>
                     <button
                       type="button"
-                      className="button-secondary px-3 py-2 text-xs"
-                      onClick={() => onDeletePhoto?.(photo)}
-                      disabled={deletingPhotoId === photo.id}
+                      className="button-secondary border-rose-500/30 px-3 py-2 text-xs text-rose-300 hover:border-rose-400/40 hover:bg-rose-500/10"
+                      onClick={() => {
+                        setPhotoDeleteError('');
+                        setPhotoToDelete(photo);
+                      }}
+                      disabled={isBusy}
+                      aria-label={`Удалить фото ${index + 1}`}
                     >
                       {deletingPhotoId === photo.id ? 'Удаление...' : 'Удалить'}
                     </button>
@@ -493,13 +623,30 @@ export function ItemForm({
         <div className="rounded-xl border border-dashed border-slate-700 bg-slate-950/40 p-4">
           <p className="mb-3 text-sm font-medium text-slate-200">{onAddPhotosLabel}</p>
           <ImageUploader
+            key={photoInputVersion}
             previews={previews}
             selectedIndex={form.primary_photo_file_index}
             onSelect={(index) => updateField('primary_photo_file_index', index)}
             onChange={handlePhotosChange}
+            disabled={isBusy}
           />
         </div>
-      </section>
+        </section>
+      </fieldset>
+
+      <ConfirmDialog
+        open={Boolean(photoToDelete)}
+        title="Удалить фотографию?"
+        description="Фотография будет удалена без возможности восстановления. Для главного фото система безопасно выберет замену и обновит публикацию."
+        confirmLabel="Удалить фото"
+        isPending={Boolean(deletingPhotoId)}
+        error={photoDeleteError}
+        onConfirm={handleConfirmPhotoDelete}
+        onCancel={() => {
+          setPhotoToDelete(null);
+          setPhotoDeleteError('');
+        }}
+      />
     </form>
   );
 }

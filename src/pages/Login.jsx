@@ -1,20 +1,33 @@
 import { useState } from 'react';
 import { LogIn, ShieldCheck } from 'lucide-react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Field } from '../components/Forms/Field';
 import { PageHeader } from '../components/UI/PageHeader';
 import { useAuth } from '../auth/useAuth';
 
 export function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const requestedLocation = location.state?.from;
+  const requestedPath = requestedLocation?.pathname;
+  const requestedSearch = typeof requestedLocation?.search === 'string' ? requestedLocation.search : '';
+  const requestedHash = typeof requestedLocation?.hash === 'string' ? requestedLocation.hash : '';
+  const requestedTarget = `${requestedPath ?? ''}${requestedSearch}${requestedHash}`;
+  const returnTo =
+    typeof requestedPath === 'string'
+    && requestedPath.startsWith('/')
+    && !requestedPath.startsWith('//')
+    && !/[\\\u0000-\u001f\u007f]/.test(requestedTarget)
+      ? requestedTarget
+      : '/dashboard';
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={returnTo} replace />;
   }
 
   async function handleSubmit(event) {
@@ -35,7 +48,7 @@ export function Login() {
 
     try {
       await signIn({ email: email.trim(), password });
-      navigate('/dashboard', { replace: true });
+      navigate(returnTo, { replace: true });
     } catch (submissionError) {
       setPassword('');
       setError(submissionError.message || 'Не удалось войти.');

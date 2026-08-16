@@ -17,7 +17,7 @@ export function Sidebar() {
   const visibleLinks = links.filter((link) => !link.adminOnly || isAuthenticated);
 
   return (
-    <aside className="hidden w-72 flex-col border-r border-slate-800/80 bg-slate-950/80 px-5 py-6 shadow-panel backdrop-blur-xl lg:flex">
+    <aside className="hidden h-screen w-72 flex-col self-start overflow-y-auto border-r border-slate-800/80 bg-slate-950/80 px-5 py-6 shadow-panel backdrop-blur-xl lg:sticky lg:top-0 lg:flex">
       <div className="mb-10">
         <div className="inline-flex items-center gap-3 rounded-2xl border border-slate-700/70 bg-slate-900/70 px-4 py-3 shadow-panel">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-sky-400/25 bg-sky-400/15 text-lg font-bold text-sky-300">

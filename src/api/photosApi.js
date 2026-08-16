@@ -1,6 +1,13 @@
 import { STORAGE_BUCKET, supabase } from '../services/supabaseClient';
 import { requireAuthenticatedSession, toMutationError } from './authApi';
 
+const PHOTO_EXTENSION_BY_TYPE = {
+  'image/avif': 'avif',
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+};
+
 function extractStoragePathFromUrl(imageUrl) {
   if (!imageUrl) {
     return null;
@@ -17,7 +24,12 @@ function extractStoragePathFromUrl(imageUrl) {
 }
 
 async function uploadItemPhoto(file, itemId) {
-  const fileExt = file.name.split('.').pop();
+  const fileExt = PHOTO_EXTENSION_BY_TYPE[file.type];
+
+  if (!fileExt) {
+    throw new Error('Неподдерживаемый тип фотографии. Используйте JPEG, PNG, WebP или AVIF.');
+  }
+
   const fileName = `${itemId}/${crypto.randomUUID()}.${fileExt}`;
 
   const { error: uploadError } = await supabase.storage.from(STORAGE_BUCKET).upload(fileName, file, {
@@ -43,7 +55,17 @@ async function uploadItemPhoto(file, itemId) {
     .single();
 
   if (photoError) {
-    await supabase.storage.from(STORAGE_BUCKET).remove([fileName]);
+    const { error: cleanupError } = await supabase.storage.from(STORAGE_BUCKET).remove([fileName]);
+
+    if (cleanupError) {
+      const error = new Error(
+        'Не удалось сохранить фотографию и очистить загруженный файл.',
+        { cause: toMutationError(photoError) },
+      );
+      error.uploadCleanupIncomplete = true;
+      throw error;
+    }
+
     throw toMutationError(photoError);
   }
 
@@ -58,8 +80,32 @@ export async function uploadItemPhotos({ itemId, photos }) {
   await requireAuthenticatedSession();
   const uploadedPhotos = [];
 
-  for (const photo of photos) {
-    uploadedPhotos.push(await uploadItemPhoto(photo, itemId));
+  try {
+    for (const photo of photos) {
+      uploadedPhotos.push(await uploadItemPhoto(photo, itemId));
+    }
+  } catch (uploadError) {
+    let cleanupIncomplete = Boolean(uploadError.uploadCleanupIncomplete);
+
+    for (const uploadedPhoto of uploadedPhotos.reverse()) {
+      try {
+        const storageCleanupError = await deletePhoto(uploadedPhoto);
+        cleanupIncomplete ||= Boolean(storageCleanupError);
+      } catch {
+        cleanupIncomplete = true;
+      }
+    }
+
+    if (cleanupIncomplete) {
+      const error = new Error(
+        'Не удалось загрузить все фотографии и полностью откатить текущую загрузку.',
+        { cause: uploadError },
+      );
+      error.uploadCleanupIncomplete = true;
+      throw error;
+    }
+
+    throw uploadError;
   }
 
   return uploadedPhotos;
@@ -69,20 +115,19 @@ export async function deletePhoto(photo) {
   await requireAuthenticatedSession();
 
   const path = extractStoragePathFromUrl(photo.image_url);
-
-  if (path) {
-    const { error: storageError } = await supabase.storage.from(STORAGE_BUCKET).remove([path]);
-
-    if (storageError) {
-      throw toMutationError(storageError);
-    }
-  }
-
   const { error } = await supabase.from('item_photos').delete().eq('id', photo.id);
 
   if (error) {
     throw toMutationError(error);
   }
+
+  if (!path) {
+    return null;
+  }
+
+  const { error: storageError } = await supabase.storage.from(STORAGE_BUCKET).remove([path]);
+
+  return storageError ? toMutationError(storageError) : null;
 }
 
 export async function deleteItemPhotos(item) {

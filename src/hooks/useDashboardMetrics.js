@@ -44,7 +44,13 @@ export function useDashboardMetrics() {
   return {
     ...metrics,
     isLoading: itemsQuery.isLoading || expensesQuery.isLoading,
-    isError: itemsQuery.isError || expensesQuery.isError,
+    isError:
+      (itemsQuery.isError && itemsQuery.data === undefined)
+      || (expensesQuery.isError && expensesQuery.data === undefined),
+    isRefetchError:
+      (itemsQuery.isError && itemsQuery.data !== undefined)
+      || (expensesQuery.isError && expensesQuery.data !== undefined),
     error: itemsQuery.error || expensesQuery.error,
+    refetch: () => Promise.all([itemsQuery.refetch(), expensesQuery.refetch()]),
   };
 }

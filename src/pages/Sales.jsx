@@ -1,9 +1,11 @@
 import { EmptyState } from '../components/Feedback/EmptyState';
 import { ErrorState } from '../components/Feedback/ErrorState';
 import { LoadingState } from '../components/Feedback/LoadingState';
+import { RefetchWarning } from '../components/Feedback/RefetchWarning';
 import { PageHeader } from '../components/UI/PageHeader';
 import { DataTableShell } from '../components/UI/DataTableShell';
 import { StatCard } from '../components/UI/StatCard';
+import { useAuth } from '../auth/useAuth';
 import { useDashboardMetrics } from '../hooks/useDashboardMetrics';
 import { formatCurrency, formatDate } from '../utils/formatters';
 import { calculateItemProfit } from '../utils/itemMetrics';
@@ -47,6 +49,7 @@ function SoldItemCard({ item }) {
 }
 
 export function Sales() {
+  const { isAuthenticated } = useAuth();
   const metrics = useDashboardMetrics();
 
   if (metrics.isLoading) {
@@ -54,11 +57,13 @@ export function Sales() {
   }
 
   if (metrics.isError) {
-    return <ErrorState description={metrics.error?.message || 'Не удалось загрузить продажи.'} />;
+    return <ErrorState description={metrics.error?.message || 'Не удалось загрузить продажи.'} onRetry={metrics.refetch} />;
   }
 
   return (
     <div className="space-y-6">
+      {metrics.isRefetchError ? <RefetchWarning onRetry={metrics.refetch} /> : null}
+
       <PageHeader
         eyebrow="Продажи"
         title="Проданные товары и итоговая прибыль"
@@ -121,7 +126,14 @@ export function Sales() {
             </div>
           </>
         ) : (
-          <EmptyState title="Продаж пока нет" description="Отметьте вещь как проданную и укажите цену продажи, чтобы увидеть итоговую прибыль." />
+          <EmptyState
+            title="Продаж пока нет"
+            description={
+              isAuthenticated
+                ? 'Отметьте вещь как проданную и укажите цену продажи, чтобы увидеть итоговую прибыль.'
+                : 'Когда администратор отметит проданные вещи, здесь появятся выручка и итоговая прибыль.'
+            }
+          />
         )}
       </DataTableShell>
     </div>

@@ -47,27 +47,23 @@ function getActivityDates(items, expenses = []) {
   ].filter(Boolean);
 }
 
-function getLatestActivityMonth(items, expenses) {
+export function buildMonthlyStats(items, expenses = []) {
   const activityDates = getActivityDates(items, expenses);
 
-  return activityDates.reduce((latestDate, date) => {
-    return date > latestDate ? date : latestDate;
-  }, activityDates[0] ?? new Date());
-}
-
-export function buildMonthlyStats(items, expenses = []) {
-  const purchaseDates = items.map((item) => parseDate(item.purchase_date)).filter(Boolean);
-
-  if (!purchaseDates.length) {
+  if (!activityDates.length) {
     return [];
   }
 
   const firstActivityMonth = startOfMonth(
-    purchaseDates.reduce((earliestDate, date) => {
+    activityDates.reduce((earliestDate, date) => {
       return date < earliestDate ? date : earliestDate;
-    }, purchaseDates[0]),
+    }, activityDates[0]),
   );
-  const lastActivityMonth = startOfMonth(getLatestActivityMonth(items, expenses));
+  const lastActivityMonth = startOfMonth(
+    activityDates.reduce((latestDate, date) => {
+      return date > latestDate ? date : latestDate;
+    }, activityDates[0]),
+  );
   const monthlyStats = [];
   const statsByMonth = {};
 

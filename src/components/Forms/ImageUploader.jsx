@@ -1,13 +1,15 @@
 import { Star } from 'lucide-react';
 
-export function ImageUploader({ previews, selectedIndex = null, onSelect, onChange }) {
+export function ImageUploader({ previews, selectedIndex = null, onSelect, onChange, disabled = false }) {
   return (
     <div className="space-y-4">
       <input
         type="file"
         multiple
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp,image/avif"
         onChange={onChange}
+        disabled={disabled}
+        aria-label="Выбрать фотографии товара"
         className="block w-full rounded-xl border border-dashed border-slate-700/90 bg-slate-950/50 p-4 text-sm text-slate-400 file:mr-4 file:rounded-xl file:border-0 file:bg-sky-400 file:px-4 file:py-2 file:font-semibold file:text-slate-950"
       />
 
@@ -25,6 +27,7 @@ export function ImageUploader({ previews, selectedIndex = null, onSelect, onChan
               aria-pressed={selectedIndex === index}
               aria-label={`Выбрать фотографию ${index + 1} главной`}
               onClick={() => onSelect?.(index)}
+              disabled={disabled}
             >
               <img
                 src={preview}

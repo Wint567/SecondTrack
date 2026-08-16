@@ -10,13 +10,22 @@ function formatNumber(value) {
 export function LineTrendChart({
   data,
   dataKey = 'value',
+  name,
   lines,
   stroke = '#34d97a',
   valueType = 'currency',
   yAxisWidth = 88,
 }) {
   const valueFormatter = valueType === 'number' ? formatNumber : formatCurrency;
-  const chartLines = lines ?? [{ dataKey, stroke }];
+  const chartLines = lines ?? [{ dataKey, name, stroke }];
+
+  if (!data?.length) {
+    return (
+      <div role="status" className="flex h-full items-center justify-center text-sm text-slate-500">
+        Нет данных для графика
+      </div>
+    );
+  }
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -24,7 +33,7 @@ export function LineTrendChart({
         <CartesianGrid stroke="#1f2937" strokeDasharray="4 4" />
         <XAxis
           dataKey="date"
-          stroke="#64748b"
+          stroke="#8b9bb0"
           tick={{ fontSize: 12 }}
           tickLine={false}
           axisLine={false}
@@ -32,7 +41,7 @@ export function LineTrendChart({
         />
         <YAxis
           width={yAxisWidth}
-          stroke="#64748b"
+          stroke="#8b9bb0"
           tick={{ fontSize: 12 }}
           tickFormatter={valueFormatter}
           tickLine={false}
@@ -49,7 +58,7 @@ export function LineTrendChart({
             key={line.dataKey}
             type="monotone"
             dataKey={line.dataKey}
-            name={line.name}
+            name={line.name ?? line.dataKey}
             stroke={line.stroke}
             strokeWidth={3}
             dot={{ r: 3 }}

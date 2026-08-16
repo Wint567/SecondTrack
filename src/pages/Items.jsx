@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { EmptyState } from '../components/Feedback/EmptyState';
 import { ErrorState } from '../components/Feedback/ErrorState';
 import { LoadingState } from '../components/Feedback/LoadingState';
+import { RefetchWarning } from '../components/Feedback/RefetchWarning';
 import { ItemFilters } from '../components/ItemTable/ItemFilters';
 import { ItemTable } from '../components/ItemTable/ItemTable';
 import { ConfirmDialog } from '../components/UI/ConfirmDialog';
@@ -20,6 +21,8 @@ export function Items() {
   const { filters, setFilters, filteredItems } = useItemFilters(itemsQuery.data ?? []);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [toast, setToast] = useState(null);
+  const hasActiveFilters = Object.values(filters).some(Boolean);
+  const hasItems = Boolean(itemsQuery.data?.length);
   const categoryOptions = useMemo(() => {
     const savedCategories = (itemsQuery.data ?? [])
       .map((item) => item.category)
@@ -38,7 +41,7 @@ export function Items() {
   }
 
   async function handleConfirmDelete() {
-    if (!itemToDelete) {
+    if (!itemToDelete || deleteItem.isPending) {
       return;
     }
 
@@ -46,6 +49,10 @@ export function Items() {
       await deleteItem.mutateAsync(itemToDelete);
       setItemToDelete(null);
     } catch (error) {
+      if (error.itemDeleted) {
+        setItemToDelete(null);
+      }
+
       setToast({
         tone: 'error',
         message: error.message || 'Не удалось удалить вещь.',
@@ -57,12 +64,21 @@ export function Items() {
     return <LoadingState label="Загрузка товаров..." />;
   }
 
-  if (itemsQuery.isError) {
-    return <ErrorState description={itemsQuery.error?.message || 'Не удалось загрузить товары.'} />;
+  if (itemsQuery.isError && itemsQuery.data === undefined) {
+    return (
+      <ErrorState
+        description={itemsQuery.error?.message || 'Не удалось загрузить товары.'}
+        onRetry={itemsQuery.refetch}
+      />
+    );
   }
 
   return (
     <div className="min-w-0 space-y-6">
+      {itemsQuery.isError && itemsQuery.data !== undefined ? (
+        <RefetchWarning onRetry={() => itemsQuery.refetch()} />
+      ) : null}
+
       <PageHeader
         eyebrow="Товары"
         title="Все добавленные вещи"
@@ -83,15 +99,27 @@ export function Items() {
       {filteredItems.length ? (
         <ItemTable
           items={filteredItems}
-          deletingItemId={deleteItem.variables?.id ?? null}
+          deletingItemId={deleteItem.isPending ? deleteItem.variables?.id ?? null : null}
           onDelete={handleDeleteRequest}
           canManage={isAuthenticated}
         />
       ) : (
         <EmptyState
-          title="По выбранным фильтрам ничего не найдено"
-          description={isAuthenticated ? 'Сбросьте фильтры или добавьте новую вещь, чтобы начать учёт.' : 'Сбросьте фильтры, чтобы вернуться к доступным товарам.'}
-          action={isAuthenticated ? (
+          title={hasItems ? 'По выбранным фильтрам ничего не найдено' : 'Товаров пока нет'}
+          description={hasItems
+            ? 'Измените или сбросьте фильтры, чтобы вернуться к доступным товарам.'
+            : isAuthenticated
+              ? 'Добавьте первую вещь, чтобы начать учёт.'
+              : 'Когда в демо появятся товары, они будут доступны здесь для просмотра.'}
+          action={hasItems && hasActiveFilters ? (
+            <button
+              type="button"
+              className="button-secondary w-full sm:w-auto"
+              onClick={() => setFilters({ status: '', brand: '', category: '', date: '' })}
+            >
+              Сбросить фильтры
+            </button>
+          ) : isAuthenticated ? (
             <Link to="/items/new" className="button-primary w-full sm:w-auto">
               Добавить вещь
             </Link>

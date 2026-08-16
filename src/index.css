@@ -34,16 +34,12 @@ body {
   border-radius: 999px;
 }
 
-.glass-panel {
-  @apply border border-slate-700/70 bg-slate-900/75 shadow-panel backdrop-blur-xl;
-}
-
 .input {
   @apply min-h-11 w-full rounded-xl border border-slate-700/80 bg-slate-950/60 px-4 py-2.5 text-sm text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-sky-400 focus:bg-slate-900/80 focus:ring-2 focus:ring-sky-400/15;
 }
 
 .select {
-  @apply input appearance-none;
+  @apply input;
 }
 
 .textarea {
