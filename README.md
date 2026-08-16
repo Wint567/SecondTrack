@@ -2,6 +2,8 @@
 
 SecondTrack is a public read-only demo for tracking second-hand clothing inventory, expenses, sales, and profit analytics. A pre-created owner account can sign in to manage data.
 
+SecondTrack is the management, inventory, and analytics application. Its companion project, SecondTrackShop, is the customer-facing storefront that consumes the prepared public product data.
+
 ## Stack
 
 - React + Vite
@@ -24,10 +26,10 @@ npm install
 ```bash
 VITE_SUPABASE_URL=your-project-url
 VITE_SUPABASE_ANON_KEY=your-anon-key
-VITE_SUPABASE_STORAGE_BUCKET=your-storage-bucket
+VITE_SUPABASE_STORAGE_BUCKET=item-photos
 ```
 
-3. Create the storage bucket specified in `VITE_SUPABASE_STORAGE_BUCKET`.
+3. Keep the default `item-photos` bucket name unless the matching Storage policies are updated as well. The included SQL creates and protects this bucket.
 
 4. Run the SQL from `supabase/schema.sql` for a fresh project. For the existing project, apply the files from `supabase/migrations` in timestamp order.
 
@@ -38,6 +40,8 @@ npm run dev
 ```
 
 ## Access Model
+
+SecondTrack provides a public read-only demo of inventory and analytics, while authenticated owner access enables administrative mutations.
 
 - Visitors can browse the dashboard, items, expenses, sales, monthly analytics, and photos without signing in.
 - Only an authenticated owner can create, update, or delete data.
