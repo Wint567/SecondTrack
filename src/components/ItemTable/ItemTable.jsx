@@ -35,7 +35,9 @@ function formatSalePrice(item) {
 }
 
 function ItemPreview({ item, size = 'table' }) {
-  const imageClassName = size === 'card' ? 'h-20 w-20' : 'h-14 w-14';
+  const imageClassName = size === 'card'
+    ? 'h-16 w-16 min-[360px]:h-20 min-[360px]:w-20'
+    : 'h-14 w-14';
 
   return (
     <ItemImage
@@ -51,12 +53,12 @@ function ItemMobileCard({ item, deletingItemId, onDelete, canManage }) {
   const hasRealizedProfit = [SOLD_STATUS, LOST_STATUS].includes(item.status);
 
   return (
-    <article className="rounded-2xl border border-slate-800/90 bg-slate-900/60 p-4 shadow-panel backdrop-blur-xl transition hover:border-slate-700/90">
-      <div className="flex gap-3">
+    <article className="w-full min-w-0 max-w-full overflow-hidden rounded-2xl border border-slate-800/90 bg-slate-900/60 p-3 shadow-panel backdrop-blur-xl transition hover:border-slate-700/90 min-[360px]:p-4">
+      <div className="flex min-w-0 gap-3">
         <ItemPreview item={item} size="card" />
         <div className="min-w-0 flex-1">
           <p className="truncate font-medium text-white">{item.title}</p>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 truncate text-xs text-slate-500">
             {[item.brand, item.category, item.size].filter(Boolean).join(' • ') || 'Без категории'}
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -70,22 +72,22 @@ function ItemMobileCard({ item, deletingItemId, onDelete, canManage }) {
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-        <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
+      <div className="mt-4 grid min-w-0 grid-cols-1 gap-2 text-sm min-[360px]:grid-cols-2 min-[360px]:gap-3">
+        <div className="min-w-0 rounded-xl border border-slate-800 bg-slate-950/35 p-3">
           <p className="text-xs text-slate-500">Закупка</p>
-          <p className="mt-1 font-medium tabular-nums text-slate-100">{formatCurrency(item.purchase_price)}</p>
+          <p className="mt-1 break-words font-medium tabular-nums text-slate-100 [overflow-wrap:anywhere]">{formatCurrency(item.purchase_price)}</p>
         </div>
-        <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
+        <div className="min-w-0 rounded-xl border border-slate-800 bg-slate-950/35 p-3">
           <p className="text-xs text-slate-500">Продажа</p>
-          <p className="mt-1 font-medium tabular-nums text-slate-100">{formatSalePrice(item)}</p>
+          <p className="mt-1 break-words font-medium tabular-nums text-slate-100 [overflow-wrap:anywhere]">{formatSalePrice(item)}</p>
         </div>
-        <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
+        <div className="min-w-0 rounded-xl border border-slate-800 bg-slate-950/35 p-3">
           <p className="text-xs text-slate-500">Расходы</p>
-          <p className="mt-1 font-medium tabular-nums text-slate-100">{formatCurrency(item.total_expenses)}</p>
+          <p className="mt-1 break-words font-medium tabular-nums text-slate-100 [overflow-wrap:anywhere]">{formatCurrency(item.total_expenses)}</p>
         </div>
-        <div className="rounded-xl border border-slate-800 bg-slate-950/35 p-3">
+        <div className="min-w-0 rounded-xl border border-slate-800 bg-slate-950/35 p-3">
           <p className="text-xs text-slate-500">Прибыль</p>
-          <p className={`mt-1 font-semibold tabular-nums ${
+          <p className={`mt-1 break-words font-semibold tabular-nums [overflow-wrap:anywhere] ${
             hasRealizedProfit
               ? item.profit >= 0 ? 'text-emerald-300' : 'text-rose-300'
               : 'text-slate-400'
@@ -96,7 +98,7 @@ function ItemMobileCard({ item, deletingItemId, onDelete, canManage }) {
       </div>
 
       {canManage ? (
-        <div className="mt-4 grid grid-cols-2 gap-2">
+        <div className="mt-4 grid min-w-0 grid-cols-1 gap-2 min-[360px]:grid-cols-2">
           <Link
             to={`/items/${item.id}/edit`}
             className="button-secondary px-3 py-2 text-xs"
@@ -122,7 +124,7 @@ function ItemMobileCard({ item, deletingItemId, onDelete, canManage }) {
 export function ItemTable({ items, deletingItemId = null, onDelete, canManage = false }) {
   return (
     <>
-      <div className="grid gap-3 md:grid-cols-2 xl:hidden">
+      <div className="grid w-full min-w-0 max-w-full grid-cols-1 gap-3 md:grid-cols-2 xl:hidden">
         {items.map((item) => (
           <ItemMobileCard
             key={item.id}
